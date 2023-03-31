@@ -1,0 +1,15 @@
+wget -nc -O audio/rach2_mov1_PO1.mp3 https://imslp.org/images/b/bd/PMLP01953-Rachmaninov-Op18m1.mp3
+wget -nc -O audio/rach2_mov1_PO2.mp3 https://imslp.org/images/1/1f/PMLP01953-dso20110514-004-rachmaninoff-piano-concerto-no2-mvtI-moderato.mp3
+wget -nc -O audio/mozart21_mov1_PO1.mp3 https://imslp.eu/files/imglnks/euimg/6/61/IMSLP516357-PMLP5554-Concerto_pour_piano_No._21_in_C_Major,_K._467_\(Wolfgang_Amadeus_Mozart\)_Philips_A_01.291_L.mp3
+wget -nc -O audio/mozart21_mov1_PO2.mp3 https://imslp.hk/files/imglnks/euimg/3/3f/IMSLP569455-PMLP05554-Mozart_W.A.,_Piano_Concerto_No.21_in_C_major,_K.467_\(Camerata_Academica_des_Mozarteums_Salzburg\)_DG_1962.mp3
+wget -nc -O audio/beeth1_mov1_PO1.mp3 https://vmirror.imslp.org/files/imglnks/usimg/c/c1/IMSLP294240-PMLP04230-dso20120512-002-beethoven-piano-concerto-no1-mvtI-allegro-con-brio.mp3
+wget -nc -O audio/beeth1_mov1_PO2.mp3 https://vmirror.imslp.org/files/imglnks/usimg/8/87/IMSLP77618-PMLP04230-Beethoven-Op015m1.MO.mp3
+wget -nc -O audio/beeth1_mov1_PO3.mp3 https://imslp.eu/files/imglnks/euimg/a/ac/IMSLP718730-PMLP4230-01.01._Allegro_Con_Brio.mp3
+wget -nc -O audio/beeth1_mov1_PO4.mp3 https://imslp.eu/files/imglnks/euimg/3/3b/IMSLP717906-PMLP4230-01.01._First_Movement-_Allegro_Con_Brio.mp3
+wget -nc -O audio/beeth1_mov1_PO5.mp3 https://imslp.hk/files/imglnks/euimg/a/a8/IMSLP584302-PMLP04230-01.ConcertoNo.1InCMajor-I.AllegroConBrio.mp3
+wget -nc -O audio/bach5_mov1_PO1.mp3 https://imslp.hk/files/imglnks/euimg/5/56/IMSLP528915-PMLP110821-Harpsichord_Concerto_No._5_in_F_Minor,_BWV_1056_\(Johann_Sebastian_Bach\)_AP_198189.mp3
+wget -nc -O audio/bach5_mov1_PO2.mp3 https://imslp.eu/files/imglnks/euimg/0/0c/IMSLP614566-PMLP110821-Bach_J.S._-_Keyboard_concerto_No._5_in_F_minor,_BWV_1056.mp3
+wget -nc -O audio/rach2_mov2_PO1.mp3 https://s9.imslp.org/files/imglnks/usimg/5/5e/IMSLP101493-PMLP01953-Rachmaninov-Op18m2.mp3
+wget -nc -O audio/rach2_mov2_PO2.mp3 https://s9.imslp.org/files/imglnks/usimg/8/84/IMSLP348563-PMLP01953-dso20110514-005-rachmaninoff-piano-concerto-no2-mvtII-adagio-sostenuto.mp3
+wget -nc -O audio/rach2_mov3_PO1.mp3 https://s9.imslp.org/files/imglnks/usimg/a/a0/IMSLP101494-PMLP01953-Rachmaninov-Op18m3.mp3
+wget -nc -O audio/rach2_mov3_PO2.mp3 https://s9.imslp.org/files/imglnks/usimg/a/a9/IMSLP348564-PMLP01953-dso20110514-006-rachmaninoff-piano-concerto-no2-mvtIII-allegro-scherzando.mp3
