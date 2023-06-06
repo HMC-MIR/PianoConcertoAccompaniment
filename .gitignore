@@ -1,0 +1,10 @@
+# Ignore Temp Data Folders
+audio
+queries
+scenarios
+experiments
+eval
+*.wav
+
+# Ignore Piano beat symlinks which are the same as Orchestra ones
+*P1.beats
