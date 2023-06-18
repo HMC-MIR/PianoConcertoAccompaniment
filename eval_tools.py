@@ -65,7 +65,7 @@ def getGroundTruthTimestamps(annotfile1, annotfile2, scenarioInfo):
     
     return np.array(eval_pts), np.array(eval_measures)
 
-def calcAlignErrors_single(hypfile, annotfile1, annotfile2, scenarioInfo):
+def calcAlignErrors_single(hypfile, annotfile1, annotfile2, scenarioInfo, frames=False):
     '''
     Calculates the alignment errors for a single hypothesis file.
     
@@ -81,6 +81,8 @@ def calcAlignErrors_single(hypfile, annotfile1, annotfile2, scenarioInfo):
     '''
     gt, measNums = getGroundTruthTimestamps(annotfile1, annotfile2, scenarioInfo) # ground truth
     hypalign = np.load(hypfile) # piano-orchestra predicted alignment in sec
+    if frames:
+        hypalign = hypalign / (22050/512)
     pred = np.interp(gt[:,0], hypalign[0,:], hypalign[1,:])
     err = pred - gt[:,1]
     return err, measNums
