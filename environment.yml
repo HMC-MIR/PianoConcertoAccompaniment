@@ -10,8 +10,9 @@ dependencies:
   - pandas=1.5
   - importnb=2023.1
   - librosa=0.10
-  - cython=0.29.32
+  - k3d=2.15.3
   - tqdm
   - pip:
     - import-ipynb==0.1.4
-    - hmc_mir==0.1.14
+    - hmc_mir==0.1.
+    - cython=3.0
