@@ -14,5 +14,5 @@ dependencies:
   - tqdm
   - pip:
     - import-ipynb==0.1.4
-    - hmc_mir==0.1.
-    - cython=3.0
+    - hmc_mir==0.1.15
+    - cython==3.0
