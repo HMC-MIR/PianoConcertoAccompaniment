@@ -100,7 +100,7 @@ def getScenarioIds(scenarios_dir):
     d = system_utils.get_scenario_info(summary_file)
     return list(d.keys())
 
-def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir):
+def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = ''):
     '''
     Calculates the alignment errors for all scenarios in an experiment directory.
     
@@ -108,11 +108,13 @@ def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir):
     exp_dir: the experiment directory to evaluate
     scenarios_dir: the directory containing the scenarios information
     out_dir: the directory to save outputs and figures to
+    hypFileExt: a string specifying an extension to the hypothesis file name (used for evaluating
+        systems at different iterations)
     '''
     # evaluate all scenarios
     d = {}
     for scenario_id in getScenarioIds(scenarios_dir):
-        hypFile = f'{exp_dir}/{scenario_id}/hyp.npy'
+        hypFile = f'{exp_dir}/{scenario_id}/hyp{hypFileExt}.npy'
         pianoAnnot = f'{scenarios_dir}/{scenario_id}/p.beats'
         orchAnnot = f'{scenarios_dir}/{scenario_id}/o.beats'
         scenarioInfo = f'{scenarios_dir}/{scenario_id}/scenario.info'
