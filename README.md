@@ -8,7 +8,7 @@ One contribution of this paper is to introduce a framework, dataset, and benchma
 
 Our main technical contribution is a novel alignment algorithm called Dense-Sparse DTW that is robust to additive noise.  It identifies prominent features in one sequence based on flux magnitude, and then aligns the selected features against the other sequence.  We show that it performs comparably to much more complicated formulations involving source separation models.
 
-You can find the ISMIR paper [here](https://drive.google.com/file/d/1EFPm45EYrwwHNQMj8y1gY0FSZDjQUNJl/view).
+You can find the ISMIR paper [here](https://drive.google.com/file/d/1EFPm45EYrwwHNQMj8y1gY0FSZDjQUNJl/view) and the code implementing Dense-Sparse DTW [here](/System_PairwiseSparseDTW.ipynb).
 
 ## Citation
 
