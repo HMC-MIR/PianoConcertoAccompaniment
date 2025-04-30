@@ -22,10 +22,10 @@ def verify_scenario_dir(indir):
     Inputs
     indir: the scenario directory to verify
     '''
-    assert os.path.exists(indir)
-    assert os.path.exists(f'{indir}/p.wav')
-    assert os.path.exists(f'{indir}/o.wav')
-    assert os.path.exists(f'{indir}/po.wav')
+    assert os.path.exists(indir), f'{indir} does not exist'
+    assert os.path.exists(f'{indir}/p.wav'), f'{indir}/p.wav does not exist'
+    assert os.path.exists(f'{indir}/o.wav'), f'{indir}/o.wav does not exist'
+    assert os.path.exists(f'{indir}/po.wav'), f'{indir}/po.wav does not exist'
 
 # %%
 def get_orchestra_start_end_times(scenario_dir):
