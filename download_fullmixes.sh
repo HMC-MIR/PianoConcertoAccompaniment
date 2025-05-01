@@ -13,3 +13,7 @@ wget -nc -O audio/rach2_mov2_PO1.mp3 https://s9.imslp.org/files/imglnks/usimg/5/
 wget -nc -O audio/rach2_mov2_PO2.mp3 https://s9.imslp.org/files/imglnks/usimg/8/84/IMSLP348563-PMLP01953-dso20110514-005-rachmaninoff-piano-concerto-no2-mvtII-adagio-sostenuto.mp3
 wget -nc -O audio/rach2_mov3_PO1.mp3 https://s9.imslp.org/files/imglnks/usimg/a/a0/IMSLP101494-PMLP01953-Rachmaninov-Op18m3.mp3
 wget -nc -O audio/rach2_mov3_PO2.mp3 https://s9.imslp.org/files/imglnks/usimg/a/a9/IMSLP348564-PMLP01953-dso20110514-006-rachmaninoff-piano-concerto-no2-mvtIII-allegro-scherzando.mp3
+wget -nc -O audio/beeth3_mov1_PO1.mp3 https://vmirror.imslp.org/files/imglnks/usimg/f/fd/IMSLP251152-PMLP04244-Beethoven_Concerto_op_37_I_Ligoratti.mp3
+wget -nc -O audio/beeth3_mov1_PO2.mp3 https://vmirror.imslp.org/files/imglnks/usimg/6/68/IMSLP82049-PMLP04244-dso20091017-002-beethoven-piano-concerto-no3-I_vbr.mp3
+wget -nc -O audio/beeth3_mov2_PO1.mp3 https://s9.imslp.org/files/imglnks/usimg/1/1b/IMSLP251153-PMLP04244-Beethoven_Concerto_op_37_II_Ligoratti.mp3
+wget -nc -O audio/beeth3_mov2_PO2.mp3 https://vmirror.imslp.org/files/imglnks/usimg/c/ce/IMSLP82050-PMLP04244-dso20091017-003-beethoven-piano-concerto-no3-II_vbr.mp3
