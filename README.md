@@ -12,5 +12,5 @@ You can find the ISMIR paper [here](https://drive.google.com/file/d/1EFPm45EYrww
 
 ## Citation
 
-TJ Tsai, Kavi Dey, Yigitcan Ozer, and Meinard Mueller. "Dense-Sparse Dynamic Time Warping for Customizing Piano Concerto Accompaniments" in Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing (ICASSP), 2025, to appear.
+TJ Tsai, Kavi Dey, Yigitcan Ozer, and Meinard Mueller. "Dense-Sparse Dynamic Time Warping for Customizing Piano Concerto Accompaniments" in Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing (ICASSP), 2025, pp. 1-5.
 
