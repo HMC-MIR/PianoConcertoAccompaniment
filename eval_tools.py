@@ -80,6 +80,9 @@ def calcAlignErrors_single(hypfile, annotfile1, annotfile2, scenarioInfo, frames
     measNums: the measure numbers that are evaluated
     '''
     gt, measNums = getGroundTruthTimestamps(annotfile1, annotfile2, scenarioInfo) # ground truth
+    if gt.shape[0] == 0:
+        print(f'No measures to evaluate in {hypfile}')
+        return None, None
     hypalign = np.load(hypfile) # piano-orchestra predicted alignment in sec
     if frames:
         hypalign = hypalign / (22050/512)
@@ -119,7 +122,8 @@ def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = ''):
         orchAnnot = f'{scenarios_dir}/{scenario_id}/o.beats'
         scenarioInfo = f'{scenarios_dir}/{scenario_id}/scenario.info'
         errs, measNums = calcAlignErrors_single(hypFile, pianoAnnot, orchAnnot, scenarioInfo)
-        d[scenario_id] = (errs, measNums) # key: scenario_id, value: (errors, measureNums)
+        if errs is not None:
+            d[scenario_id] = (errs, measNums) # key: scenario_id, value: (errors, measureNums)
         
     # save
     if not os.path.exists(out_dir):

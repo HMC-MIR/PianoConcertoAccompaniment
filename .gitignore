@@ -9,6 +9,9 @@ eval
 # Ignore Piano beat symlinks which are the same as Orchestra ones
 *P1.beats
 
+# Ignore original beat files
+*orig.beats
+
 # Ignore Python Cache
 __pycache__
 .pyc
