@@ -2,6 +2,19 @@ import numpy as np
 import librosa as lb
 import soundfile as sf
 import pandas as pd
+import re
+
+def get_audio_files(audio_summary_file, regexp):
+        '''
+        Returns a list of audio filenames matching a given regular expression.
+        
+        Inputs
+        regexp: a string specifying the regular expression
+        '''
+        
+        df = pd.read_csv(audio_summary_file)
+        p_list = [a for a in df['id'] if re.search(regexp, a)] 
+        return p_list
 
 def get_query_timestamps(piece_id, query_measures_file, annot_file):
         '''

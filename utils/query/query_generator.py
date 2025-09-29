@@ -9,7 +9,7 @@ import pandas as pd
 from .constant import generate_tsm_audio_constant, modify_annots_tsm_constant
 from .random import generate_tsm_audio_random, modify_annots_tsm_random
 from .continuous import generate_tsm_audio_continuous
-from .utils import get_query_timestamps, extract_audio_excerpt, modify_annots_select
+from .utils import get_query_timestamps, extract_audio_excerpt, modify_annots_select, get_audio_files
 
 class QueryGenerator:
     """
@@ -40,18 +40,6 @@ class QueryGenerator:
         self.audio_root = audio_root
         self.annot_root = annot_root
 
-    def get_audio_files(self, regexp):
-        '''
-        Returns a list of audio filenames matching a given regular expression.
-        
-        Inputs
-        regexp: a string specifying the regular expression
-        '''
-        
-        df = pd.read_csv(self.audio_summary_file)
-        p_list = [a for a in df['id'] if re.search(regexp, a)] 
-        return p_list
-
     def generateQueriesConstant(self, outdir, tsm_factors):
         '''
         Preps and generates time-scale modified audio queries and annotation files.
@@ -64,7 +52,7 @@ class QueryGenerator:
         if not os.path.exists(outdir):
             os.mkdir(outdir)    
         
-        for p_file in self.get_audio_files(r'_P\d+.\S+$'): # all solo piano 
+        for p_file in get_audio_files(self.audio_summary_file, r'_P\d+.\S+$'): # all solo piano 
             
             base_id = os.path.splitext(p_file)[0] # e.g. rach2_mov1_P1
             piece_dir = f'{outdir}/{base_id}'
@@ -117,7 +105,7 @@ class QueryGenerator:
         if not os.path.exists(outdir):
             os.mkdir(outdir)
             
-        for p_file in self.get_audio_files(r'_P\d+.\S+$'): # all solo piano 
+        for p_file in get_audio_files(self.audio_summary_file, r'_P\d+.\S+$'): # all solo piano 
             base_id = os.path.splitext(p_file)[0] # e.g. rach2_mov1_P1
             piece_dir = f'{outdir}/{base_id}'
             
@@ -163,7 +151,7 @@ class QueryGenerator:
         if not os.path.exists(outdir):
             os.mkdir(outdir)
             
-        for p_file in self.get_audio_files(r'_P\d+.\S+$'): # all solo piano 
+        for p_file in get_audio_files(self.audio_summary_file, r'_P\d+.\S+$'): # all solo piano 
             base_id = os.path.splitext(p_file)[0] # e.g. rach2_mov1_P1
             piece_dir = f'{outdir}/{base_id}'
             
