@@ -48,5 +48,4 @@ def generate_tsm_audio_continuous(infile, outfile, max_alpha_change, seed, max_t
     # perform tsm
     y_mod = tsm_tools.tsmvar_hybrid(y, alignment, sr)
     sf.write(outfile, y_mod, sr, subtype='PCM_16')
-    print("alignment done")
     return alignment

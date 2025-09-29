@@ -110,6 +110,9 @@ class QueryGenerator:
             piece_dir = f'{outdir}/{base_id}'
             
             tsm_dir = f'{piece_dir}/tsm_random_max{max_tsm_factor:.2f}' # e.g. outdir/rach2_mov1_P1/tsm_random_max2.00
+            if os.path.exists(tsm_dir):
+                print(f'Directory {tsm_dir} already exists.  Skipping.')
+                continue
             os.mkdir(tsm_dir)
             
             for i in range(num_queries):
