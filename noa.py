@@ -3,7 +3,7 @@ import pickle
 from tqdm import tqdm
 from pathlib import Path
 from numba import jit, njit
-from baselineDTW import compute_match_distance_frame_to_feature_matrix
+# from baselineDTW import compute_match_distance_frame_to_feature_matrix
 
 @njit(cache=True)
 def compute_cosine_distance(feature_row, reference_features):
@@ -112,7 +112,7 @@ def update_alignment_row_numba_norm(i, costs, D, B, dn, dm, dw, ref_length):
 
     return best_j
 
-def alignNOA(F1, F2, outfile = None, steps = np.array([1, 1, 1, 2, 2, 1]).reshape((-1,2)), weights = np.array([1,1,2]), cost_metric = compute_cosine_distance):
+def alignNOA(F1, F2, outfile = None, steps = np.array([1, 1, 1, 2, 2, 1]).reshape((-1,2)), weights = np.array([1,1,2]), cost_metric = compute_cosine_distance, ref_start_time = 0):
     '''
     Align two feature matrices using NOA
     Inputs:
@@ -121,11 +121,14 @@ def alignNOA(F1, F2, outfile = None, steps = np.array([1, 1, 1, 2, 2, 1]).reshap
         outfile: path to save the output pickle file
         steps: step sizes for the DTW algorithm
         weights: weights for the DTW algorithm
+        ref_start_time: time of the first frame of the reference to align to
     Outputs:
         path: warping path of shape (2, n_frames) where the first row is the indices of F1 and the second row is the indices of F2
     '''
     
     path = [[0,0]] # initialize path from origin
+    hop_sec = 512 / 22050
+    F2 = F2[:, int(ref_start_time / hop_sec):]
     ref_length = F2.shape[1]
     dn, dm = steps[:, 0], steps[:, 1]
     
@@ -147,7 +150,14 @@ def alignNOA(F1, F2, outfile = None, steps = np.array([1, 1, 1, 2, 2, 1]).reshap
         path.append([i, best_j])
         
     # convert path to numpy array
-    path = np.array(path, dtype=np.int32).T
+    path = np.array(path, dtype=np.float32).T
+
+    # convert to seconds
+    path[0, :] *= hop_sec
+    path[1, :] *= hop_sec
+
+    # add ref_start_time to path
+    path[1, :] += ref_start_time
     
     if outfile:
         pickle.dump(path, open(outfile, 'wb'))
