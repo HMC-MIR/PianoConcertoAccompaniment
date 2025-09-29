@@ -4,6 +4,7 @@ queries
 scenarios
 experiments
 eval
+cache
 *.wav
 
 # Ignore Piano beat symlinks which are the same as Orchestra ones
