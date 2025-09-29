@@ -83,6 +83,10 @@ def calcAlignErrors_single(hypfile, annotfile1, annotfile2, scenarioInfo, frames
     if gt.shape[0] == 0:
         print(f'No measures to evaluate in {hypfile}')
         return None, None
+    # check if hypfile exists
+    if not os.path.exists(hypfile):
+        print(f'{hypfile} does not exist')
+        return None, None
     hypalign = np.load(hypfile) # piano-orchestra predicted alignment in sec
     if frames:
         hypalign = hypalign / (22050/512)
@@ -103,7 +107,7 @@ def getScenarioIds(scenarios_dir):
     d = system_utils.get_scenario_info(summary_file)
     return list(d.keys())
 
-def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = ''):
+def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', tsm = False):
     '''
     Calculates the alignment errors for all scenarios in an experiment directory.
     
@@ -113,11 +117,15 @@ def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = ''):
     out_dir: the directory to save outputs and figures to
     hypFileExt: a string specifying an extension to the hypothesis file name (used for evaluating
         systems at different iterations)
+    tsm: if True, the hypothesis file is a TSM path file
     '''
     # evaluate all scenarios
     d = {}
     for scenario_id in getScenarioIds(scenarios_dir):
-        hypFile = f'{exp_dir}/{scenario_id}/hyp{hypFileExt}.npy'
+        if tsm:
+            hypFile = f'{exp_dir}/{scenario_id}/tsm{hypFileExt}.npy'
+        else:
+            hypFile = f'{exp_dir}/{scenario_id}/hyp{hypFileExt}.npy'
         pianoAnnot = f'{scenarios_dir}/{scenario_id}/p.beats'
         orchAnnot = f'{scenarios_dir}/{scenario_id}/o.beats'
         scenarioInfo = f'{scenarios_dir}/{scenario_id}/scenario.info'
