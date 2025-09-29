@@ -4,6 +4,7 @@ queries
 scenarios
 experiments
 eval
+eval_tsm
 cache
 *.wav
 
