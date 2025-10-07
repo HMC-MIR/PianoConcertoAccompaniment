@@ -76,6 +76,26 @@ def get_orchestra_query_boundaries(scenario_dir):
     return orch_start_sec, orch_end_sec
 
 # %%
+def get_piano_query_boundaries(scenario_dir):
+    '''
+    Determines the start and end time in the piano recording where the query is located.
+    
+    Inputs
+    scenario_dir: the directory containing the scenario information
+    
+    Returns the query start and end times in the piano recording, specified in seconds
+    '''
+    
+    info_file = f'{scenario_dir}/scenario.info'
+    assert os.path.exists(info_file)
+    
+    d = get_scenario_info(info_file)
+    p_start_sec = d['pStart']
+    p_end_sec = d['pEnd']
+    
+    return p_start_sec, p_end_sec
+
+# %%
 def get_scenario_info(infile):
     '''
     Parses a scenarios summary (multiple) or info (single) file and returns the information as a dictionary.
