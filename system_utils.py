@@ -96,6 +96,26 @@ def get_piano_query_boundaries(scenario_dir):
     return p_start_sec, p_end_sec
 
 # %%
+def get_piano_reference_boundaries(scenario_dir):
+    '''
+    Determines the start and end time in the piano recording where the piano reference is located.
+    
+    Inputs
+    scenario_dir: the directory containing the scenario information
+    
+    Returns the piano reference start and end times in the piano recording, specified in seconds
+    '''
+    
+    info_file = f'{scenario_dir}/scenario.info'
+    assert os.path.exists(info_file)
+    
+    d = get_scenario_info(info_file)
+    p_start_sec = d['prefStart']
+    p_end_sec = d['prefEnd']
+    
+    return p_start_sec, p_end_sec
+
+# %%
 def get_scenario_info(infile):
     '''
     Parses a scenarios summary (multiple) or info (single) file and returns the information as a dictionary.
@@ -115,7 +135,8 @@ def get_scenario_info(infile):
     'pEnd': timestamp of query end in P recording
     'oStart': timestamp of query start in O recording
     'oEnd': timestamp of query end in O recording
-    
+    'prefStart': timestamp of piano reference start in P recording
+    'prefEnd': timestamp of piano reference end in P recording
     If an info file is specified, returns a dictionary with the key-value pairs listed above, as well as:
     
     'scenario_id': the scenario id
@@ -135,7 +156,9 @@ def get_scenario_info(infile):
             d[sid]['pEnd'] = float(parts[7])
             d[sid]['oStart'] = float(parts[8])
             d[sid]['oEnd'] = float(parts[9])
-    
+            d[sid]['prefStart'] = float(parts[10])
+            d[sid]['prefEnd'] = float(parts[11])
+            
     if len(d) == 1: # info file
         d[sid]['scenario_id'] = sid
         return d[sid]
