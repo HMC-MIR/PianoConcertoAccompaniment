@@ -11,7 +11,7 @@ from .query import QueryGenerator, get_audio_files, get_query_timestamps
 from .constants import *
 
 # Import tsm utilities
-from .tsm import TSM, online_tsm
+from .tsm import TSM, online_tsm, to_tsm_path
 
 __all__ = [
     'QueryGenerator',
@@ -19,5 +19,6 @@ __all__ = [
     'get_query_timestamps',
     'constants'
     'TSM',
-    'online_tsm'
+    'online_tsm',
+    'to_tsm_path'
 ]
