@@ -1,4 +1,4 @@
-# This file contains functions for converting from a time-scale modified path to a TSM path
+# This file contains functions for converting from an alignmentpath to a TSM path
 import warnings
 import numpy as np
 import utils.constants as constants
@@ -176,11 +176,6 @@ def to_tsm_path(alignment_path, ref_length=None, query_length=None):
     alpha_history = []
 
     for i, ref_frame in enumerate(alignment_path):
-        if ref_frame > ref_length:
-            #print(f"End of reference reached at frame {i}. Ref frame: {ref_frame}, Ref length: {ref_length}")
-            #break
-            pass
-
         # update the alpha value
         if (i + 1) % constants.DEFAULT_ALPHA_UPDATE_FREQUENCY == 0:
             new_alpha = _get_alpha_numba(
@@ -199,21 +194,21 @@ def to_tsm_path(alignment_path, ref_length=None, query_length=None):
                 current_alpha = new_alpha
                 base_alpha = current_alpha
 
-        """ # adjust alpha value based on deviation
+        # adjust alpha value based on deviation
         elif (i + 1) % constants.DEFAULT_ALPHA_ADJUST_FREQUENCY == 0:
             curr_frame = int(round(pos / constants.DEFAULT_HOP_LENGTH))
-            deviation = curr_frame - alignment_path[i]
+            deviation = curr_frame - (alignment_path[i] - alignment_path[0])
             scale = calc_scale_from_deviation(
                 deviation,
                 constants.DEFAULT_ALPHA_ADJUST_SENSITIVITY,
                 constants.DEFAULT_ALPHA_ADJUST_MAX_SCALE,
             )
-            current_alpha = scale * base_alpha
+            current_alpha = base_alpha * scale
             current_alpha = np.clip(
                 current_alpha,
                 1 / constants.DEFAULT_MAX_TIMEWARP_FACTOR,
                 constants.DEFAULT_MAX_TIMEWARP_FACTOR,
-            ) """
+            )
         query_alpha_history.append(current_alpha)
 
         # update TSM if not at end of reference
