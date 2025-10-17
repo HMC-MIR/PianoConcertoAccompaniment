@@ -140,14 +140,14 @@ class AlphaCache:
 
 
 
-def to_tsm_path(alignment_path, ref_length=None, query_length=None):
+def to_tsm_path(alignment_path, ref_length=None, query_length=None, lag=0):
     """Converts raw alignment path to TSM path
 
     Args:
         alignment_path (np.ndarray): Alignment path of shape (2, N), where the first row is the query indices and the second row is the reference indices
         ref_length (int): Length of reference, in feature frames
         query_length (int): Length of query, in feature frames
-
+        lag (int): Lag to apply to the TSM path
     Returns:
         np.ndarray: TSM path
     """
@@ -174,13 +174,15 @@ def to_tsm_path(alignment_path, ref_length=None, query_length=None):
     applied_alpha = 1.0
     query_alpha_history = []
     alpha_history = []
+    lag_frames = int(lag / 1000 * constants.DEFAULT_SR / constants.DEFAULT_HOP_LENGTH)
+    lag_samples = int(lag / 1000 * constants.DEFAULT_SR)
 
     for i, ref_frame in enumerate(alignment_path):
         # update the alpha value
         if (i + 1) % constants.DEFAULT_ALPHA_UPDATE_FREQUENCY == 0:
             new_alpha = _get_alpha_numba(
                 alignment_path,
-                i,
+                i - lag_frames,
                 history=constants.DEFAULT_ALPHA_LOOKBACK,
                 default_alpha=1.0,
                 max_timewarp_factor=constants.DEFAULT_MAX_TIMEWARP_FACTOR,
@@ -196,8 +198,9 @@ def to_tsm_path(alignment_path, ref_length=None, query_length=None):
 
         # adjust alpha value based on deviation
         elif (i + 1) % constants.DEFAULT_ALPHA_ADJUST_FREQUENCY == 0:
-            curr_frame = int(round(pos / constants.DEFAULT_HOP_LENGTH))
-            deviation = curr_frame - (alignment_path[i] - alignment_path[0])
+            curr_frame = int(round((pos - lag_samples) / constants.DEFAULT_HOP_LENGTH))
+            latest_frame = max(0, int(i - lag_frames))  # in feature frames
+            deviation = curr_frame - (alignment_path[latest_frame] - alignment_path[0])
             scale = calc_scale_from_deviation(
                 deviation,
                 constants.DEFAULT_ALPHA_ADJUST_SENSITIVITY,
