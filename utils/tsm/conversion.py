@@ -149,7 +149,7 @@ def to_tsm_path(alignment_path, ref_length=None, query_length=None, lag=0):
         query_length (int): Length of query, in feature frames
         lag (int): Lag to apply to the TSM path
     Returns:
-        np.ndarray: TSM path
+        np.ndarray: TSM path in frames
     """
     tsm_path = [0.0]
 
