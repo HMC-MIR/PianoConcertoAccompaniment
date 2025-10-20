@@ -107,7 +107,7 @@ def getScenarioIds(scenarios_dir):
     d = system_utils.get_scenario_info(summary_file)
     return list(d.keys())
 
-def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', tsm = False):
+def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', tsm = False, lag = 0):
     '''
     Calculates the alignment errors for all scenarios in an experiment directory.
     
@@ -118,12 +118,16 @@ def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', tsm 
     hypFileExt: a string specifying an extension to the hypothesis file name (used for evaluating
         systems at different iterations)
     tsm: if True, the hypothesis file is a TSM path file
+    lag: lag to apply to the TSM path
     '''
     # evaluate all scenarios
     d = {}
     for scenario_id in getScenarioIds(scenarios_dir):
         if tsm:
-            hypFile = f'{exp_dir}/{scenario_id}/tsm{hypFileExt}.npy'
+            if lag == 0:
+                hypFile = f'{exp_dir}/{scenario_id}/tsm{hypFileExt}.npy'
+            else: # if lag is not 0, the hypothesis file is a TSM path file with the lag
+                hypFile = f'{exp_dir}/{scenario_id}/tsm_lag{lag}{hypFileExt}.npy'
         else:
             hypFile = f'{exp_dir}/{scenario_id}/hyp{hypFileExt}.npy'
         pianoAnnot = f'{scenarios_dir}/{scenario_id}/p.beats'
