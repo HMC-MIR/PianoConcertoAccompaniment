@@ -108,6 +108,7 @@ def getScenarioIds(scenarios_dir):
     return list(d.keys())
 
 def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', tsm = False, lag = 0, piece_filter = None):
+def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', tsm = False, lag = 0, piece_filter = None):
     '''
     Calculates the alignment errors for all scenarios in an experiment directory.
     Inputs
@@ -118,6 +119,8 @@ def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', tsm 
         systems at different iterations)
     tsm: if True, the hypothesis file is a TSM path file
     lag: lag to apply to the TSM path
+    piece_filter: if specified, only evaluate scenarios from pieces whose IDs contain this string
+                  (e.g., 'bach5' to filter for Bach pieces, 'beeth' for Beethoven, 'mozart' for Mozart)
     piece_filter: if specified, only evaluate scenarios from pieces whose IDs contain this string
                   (e.g., 'bach5' to filter for Bach pieces, 'beeth' for Beethoven, 'mozart' for Mozart)
     '''
