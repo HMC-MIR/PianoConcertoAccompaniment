@@ -65,53 +65,6 @@ def update_alignment_row_numba(i, costs, D, B, dn, dm, dw, ref_length):
 
     return best_j
 
-@njit(cache=True)
-def update_alignment_row_numba_norm(i, costs, D, B, dn, dm, dw, ref_length):
-    """
-    Update alignment row using numba for optimized performance.
-
-    Args:
-        i (int): Current row index in the alignment matrix.
-        costs (np.ndarray): Cost vector for the current feature row.
-        D (np.ndarray): Alignment cost matrix.
-        B (np.ndarray): Backtrace matrix.
-        dn (np.ndarray): Row step sizes.
-        dm (np.ndarray): Column step sizes.
-        dw (np.ndarray): Weights for each step.
-        ref_length (int): Length of the reference features.
-    """
-    best_j = 0
-    best_cost = np.inf
-
-    for j in range(min(costs.shape[0], ref_length)):
-        best_step_cost = np.inf
-        best_step_cost_norm = np.inf
-        best_step = -1
-
-        for k, (di, dj, w) in enumerate(zip(dn, dm, dw)):
-            prev_i, prev_j = i - di, j - dj
-
-            if prev_i < 0 or prev_j < 0 or prev_j >= ref_length:
-                continue
-
-            cur_cost = D[prev_i, prev_j] + costs[j] * w
-            norm_cost = cur_cost / (i + 1 + j + 1)  # Normalize
-
-            if norm_cost < best_step_cost_norm:
-                best_step_cost_norm = norm_cost
-                best_step = k
-                best_step_cost = cur_cost
-
-        if best_step != -1:
-            D[i, j] = best_step_cost
-            B[i, j] = best_step
-
-            if best_step_cost_norm < best_cost:
-                best_cost = best_step_cost_norm
-                best_j = j
-
-    return best_j
-
 def alignNOA(F1, F2, outfile = None, steps = np.array([1, 1, 1, 2, 2, 1]).reshape((-1,2)), weights = np.array([1,1,2]), cost_metric = compute_cosine_distance, ref_start_time = 0):
     '''
     Align two feature matrices using NOA
@@ -163,6 +116,53 @@ def alignNOA(F1, F2, outfile = None, steps = np.array([1, 1, 1, 2, 2, 1]).reshap
         pickle.dump(path, open(outfile, 'wb'))
 
     return path
+
+@njit(cache=True)
+def update_alignment_row_numba_norm(i, costs, D, B, dn, dm, dw, ref_length):
+    """
+    Update alignment row using numba for optimized performance.
+
+    Args:
+        i (int): Current row index in the alignment matrix.
+        costs (np.ndarray): Cost vector for the current feature row.
+        D (np.ndarray): Alignment cost matrix.
+        B (np.ndarray): Backtrace matrix.
+        dn (np.ndarray): Row step sizes.
+        dm (np.ndarray): Column step sizes.
+        dw (np.ndarray): Weights for each step.
+        ref_length (int): Length of the reference features.
+    """
+    best_j = 0
+    best_cost = np.inf
+
+    for j in range(min(costs.shape[0], ref_length)):
+        best_step_cost = np.inf
+        best_step_cost_norm = np.inf
+        best_step = -1
+
+        for k, (di, dj, w) in enumerate(zip(dn, dm, dw)):
+            prev_i, prev_j = i - di, j - dj
+
+            if prev_i < 0 or prev_j < 0 or prev_j >= ref_length:
+                continue
+
+            cur_cost = D[prev_i, prev_j] + costs[j] * w
+            norm_cost = cur_cost / (i + 1 + j + 1)  # Normalize
+
+            if norm_cost < best_step_cost_norm:
+                best_step_cost_norm = norm_cost
+                best_step = k
+                best_step_cost = cur_cost
+
+        if best_step != -1:
+            D[i, j] = best_step_cost
+            B[i, j] = best_step
+
+            if best_step_cost_norm < best_cost:
+                best_cost = best_step_cost_norm
+                best_j = j
+
+    return best_j
 
 def alignNOA_batch(train_file, chroma_dir, outdir, steps = np.array([1, 1, 1, 2, 2, 1]).reshape((-1,2)), weights = np.array([1,1,2]), cost_metric = compute_cosine_distance):
     '''
