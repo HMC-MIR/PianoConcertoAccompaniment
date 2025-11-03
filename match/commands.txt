@@ -1,2 +1,1 @@
-java -jar match/Perform
-anceMatcher.jar -b -q -D --use-chroma-map -os [wav1 dir] [wav2 dir] scenarios/random/s1/matcher.jar >> dump_features_testagain.txt
+java -jar match/PerformanceMatcher.jar -b -q -D --use-chroma-map -os match/offline_alignment_path.txt [wav1 dir] [wav2 dir] scenarios/random/s1/matcher.jar >> dump_features_testagain.txt

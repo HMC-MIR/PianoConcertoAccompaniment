@@ -1,0 +1,2 @@
+Error: LinkageError occurred while loading main class at.ofai.music.match.PerformanceMatcher
+	java.lang.UnsupportedClassVersionError: at/ofai/music/match/PerformanceMatcher has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 55.0
