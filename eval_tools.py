@@ -108,7 +108,6 @@ def getScenarioIds(scenarios_dir):
     return list(d.keys())
 
 def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', tsm = False, lag = 0, piece_filter = None):
-def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', tsm = False, lag = 0, piece_filter = None):
     '''
     Calculates the alignment errors for all scenarios in an experiment directory.
     Inputs
