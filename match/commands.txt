@@ -1,0 +1,2 @@
+java -jar match/Perform
+anceMatcher.jar -b -q -D --use-chroma-map -os [wav1 dir] [wav2 dir] scenarios/random/s1/matcher.jar >> dump_features_testagain.txt
