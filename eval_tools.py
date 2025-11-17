@@ -127,6 +127,7 @@ def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', tsm 
     d = {}
     saved_scenario_ids = []
     if piece_filter is not None:
+        print(f"Evaluating scenarios for piece {piece_filter}")
         for scenario_id in getScenarioIds(scenarios_dir):
         # Apply piece filter if specified
             if piece_filter is not None:
@@ -154,6 +155,7 @@ def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', tsm 
             if errs is not None:
                 d[scenario_id] = (errs, measNums) # key: scenario_id, value: (errors, measureNums)
     else:
+        print(f"Evaluating all scenarios")
         for scenario_id in getScenarioIds(scenarios_dir):
             print(f"Evaluating scenario ID: {scenario_id}")
             if tsm:
