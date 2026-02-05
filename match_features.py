@@ -74,8 +74,9 @@ def extract_match_features(wav_path, output_path=None):
     # Reshape the features into a 2D array and transpose
     # Each row is a time frame, each column is a feature dimension
     features = np.array(features).T
+    
     if features.shape[0] != 84:
-        np.vstack((features, np.zeros((84 - features.shape[0], features.shape[1]))))
+        features = np.vstack((features, np.zeros((84 - features.shape[0], features.shape[1]))))
 
     # Optionally save to pickle
     if output_path:
