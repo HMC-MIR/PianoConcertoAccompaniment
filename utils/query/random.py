@@ -77,6 +77,10 @@ def generate_tsm_audio_random(infile, outfile, max_tsm_factor, seed):
     # apply TSM and save to file
     y_mod = tsm_tools.tsmvar_hybrid(y, alignment, sr)
     sf.write(outfile, y_mod, sr, subtype='PCM_16')
+    
+    # save alphas to file
+    np.save(f'{outfile}.alphas.npy', alphas)
+    
     return alignment
 
 def modify_annots_tsm_random(infile, outfile, alignment):

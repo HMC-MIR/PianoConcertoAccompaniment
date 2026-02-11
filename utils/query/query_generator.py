@@ -110,7 +110,7 @@ class QueryGenerator:
             base_id = os.path.splitext(p_file)[0] # e.g. rach2_mov1_P1
             piece_dir = f'{outdir}/{base_id}'
             
-            tsm_dir = f'{piece_dir}/tsm_random_max{max_tsm_factor:.2f}' # e.g. outdir/rach2_mov1_P1/tsm_random_max2.00
+            tsm_dir = f'{piece_dir}/tsm_random_max{max_tsm_factor}' # e.g. outdir/rach2_mov1_P1/tsm_random_max2.00
             if os.path.exists(tsm_dir):
                 # remove the directory
                 shutil.rmtree(tsm_dir)
@@ -159,7 +159,7 @@ class QueryGenerator:
             base_id = os.path.splitext(p_file)[0] # e.g. rach2_mov1_P1
             piece_dir = f'{outdir}/{base_id}'
             
-            tsm_dir = f'{piece_dir}/tsm_continuous_max{max_tsm_factor:.2f}' # e.g. outdir/rach2_mov1_P1/tsm_continuous_max2.00
+            tsm_dir = f'{piece_dir}/tsm_continuous_max{max_tsm_factor}' # e.g. outdir/rach2_mov1_P1/tsm_continuous_max2.00
             if os.path.exists(tsm_dir):
                 # remove the directory
                 shutil.rmtree(tsm_dir)
