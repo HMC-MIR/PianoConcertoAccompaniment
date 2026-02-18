@@ -107,7 +107,7 @@ def getScenarioIds(scenarios_dir):
     d = system_utils.get_scenario_info(summary_file)
     return list(d.keys())
 
-def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', tsm = False, lag = 0, piece_filter = None):
+def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', piece_filter = None):
     '''
     Calculates the alignment errors for all scenarios in an experiment directory.
     Inputs
@@ -116,8 +116,6 @@ def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', tsm 
     out_dir: the directory to save outputs and figures to
     hypFileExt: a string specifying an extension to the hypothesis file name (used for evaluating
         systems at different iterations)
-    tsm: if True, the hypothesis file is a TSM path file
-    lag: lag to apply to the TSM path
     piece_filter: if specified, only evaluate scenarios from pieces whose IDs contain this string
                   (e.g., 'bach5' to filter for Bach pieces, 'beeth' for Beethoven, 'mozart' for Mozart)
     piece_filter: if specified, only evaluate scenarios from pieces whose IDs contain this string
@@ -140,37 +138,20 @@ def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', tsm 
                 if piece_name == piece_filter:
                     saved_scenario_ids.append(scenario_id)
         print(f"Evaluating {len(saved_scenario_ids)} scenarios for piece {piece_filter}")
-        for scenario_id in saved_scenario_ids:
-            if tsm:
-                if lag == 0:
-                    hypFile = f'{exp_dir}/{scenario_id}/tsm{hypFileExt}.npy'
-                else: # if lag is not 0, the hypothesis file is a TSM path file with the lag
-                    hypFile = f'{exp_dir}/{scenario_id}/tsm_lag{lag}{hypFileExt}.npy'
-            else:
-                hypFile = f'{exp_dir}/{scenario_id}/hyp{hypFileExt}.npy'
-            pianoAnnot = f'{scenarios_dir}/{scenario_id}/p.beats'
-            orchAnnot = f'{scenarios_dir}/{scenario_id}/o.beats'
-            scenarioInfo = f'{scenarios_dir}/{scenario_id}/scenario.info'
-            errs, measNums = calcAlignErrors_single(hypFile, pianoAnnot, orchAnnot, scenarioInfo)
-            if errs is not None:
-                d[scenario_id] = (errs, measNums) # key: scenario_id, value: (errors, measureNums)
     else:
         print(f"Evaluating all scenarios")
-        for scenario_id in getScenarioIds(scenarios_dir):
-            print(f"Evaluating scenario ID: {scenario_id}")
-            if tsm:
-                if lag == 0:
-                    hypFile = f'{exp_dir}/{scenario_id}/tsm{hypFileExt}.npy'
-                else: # if lag is not 0, the hypothesis file is a TSM path file with the lag
-                    hypFile = f'{exp_dir}/{scenario_id}/tsm_lag{lag}{hypFileExt}.npy'
-            else:
-                hypFile = f'{exp_dir}/{scenario_id}/hyp{hypFileExt}.npy'
-            pianoAnnot = f'{scenarios_dir}/{scenario_id}/p.beats'
-            orchAnnot = f'{scenarios_dir}/{scenario_id}/o.beats'
-            scenarioInfo = f'{scenarios_dir}/{scenario_id}/scenario.info'
-            errs, measNums = calcAlignErrors_single(hypFile, pianoAnnot, orchAnnot, scenarioInfo)
-            if errs is not None:
-                d[scenario_id] = (errs, measNums) # key: scenario_id, value: (errors, measureNums)
+
+    # evaluate all scenarios of interest
+    for scenario_id in getScenarioIds(scenarios_dir):
+        print(f"Evaluating scenario ID: {scenario_id}")
+        hypFile = f'{exp_dir}/{scenario_id}/hyp{hypFileExt}.npy'
+        pianoAnnot = f'{scenarios_dir}/{scenario_id}/p.beats'
+        orchAnnot = f'{scenarios_dir}/{scenario_id}/o.beats'
+        scenarioInfo = f'{scenarios_dir}/{scenario_id}/scenario.info'
+        errs, measNums = calcAlignErrors_single(hypFile, pianoAnnot, orchAnnot, scenarioInfo)
+        if errs is not None:
+            d[scenario_id] = (errs, measNums) # key: scenario_id, value: (errors, measureNums)
+
     # save
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
