@@ -65,11 +65,11 @@ class QueryGenerator:
             
             for tsm_factor in tsm_factors:
                 
-                tsm_dir = f'{piece_dir}/tsm{tsm_factor:.2f}' # e.g. outdir/rach2_mov1_P1/tsm0.85
+                tsm_dir = f'{piece_dir}/tsm{tsm_factor}' # e.g. outdir/rach2_mov1_P1/tsm0.85
                 os.mkdir(tsm_dir)
                 
                 # generate time-scale modified audio
-                tsm_id = f'{base_id}_tsm{tsm_factor:.2f}_all' # e.g. rach2_mov1_P1_tsm0.85_all
+                tsm_id = f'{base_id}_tsm{tsm_factor}_all' # e.g. rach2_mov1_P1_tsm0.85_all
                 orig_audio_file = f'{self.audio_root}/{p_file}'
                 tsm_audio_file = f'{tsm_dir}/{tsm_id}.wav'
                 generate_tsm_audio_constant(orig_audio_file, tsm_audio_file, tsm_factor)
@@ -86,7 +86,7 @@ class QueryGenerator:
                 for cnt, (query_start, query_end) in enumerate(query_tuples):
                     
                     # generate query audio file
-                    query_id = f'{base_id}_tsm{tsm_factor:.2f}_q{cnt+1}' # e.g. rach2_mov1_P1_tsm0.85_q1
+                    query_id = f'{base_id}_tsm{tsm_factor}_q{cnt+1}' # e.g. rach2_mov1_P1_tsm0.85_q1
                     query_audio_file = f'{tsm_dir}/{query_id}.wav'
                     extract_audio_excerpt(tsm_audio_file, query_audio_file, query_start, query_end)
                     

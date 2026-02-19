@@ -1,0 +1,14 @@
+2026-02-19 05:44:44,983 - benchmark - INFO - Logging to logs/benchmark_20260219_054444.log
+2026-02-19 05:44:44,983 - benchmark - INFO - Evaluating benchmark=train
+2026-02-19 05:44:44,983 - benchmark - INFO -   Mode: constant, systems: ['NOA', 'NOA_MONOTONIC', 'OLTW', 'DTW']
+2026-02-19 05:44:44,983 - benchmark - INFO -     Evaluating NOA...
+2026-02-19 05:44:45,176 - benchmark - INFO -     NOA evaluation complete → eval/train/constant/NOA
+2026-02-19 05:44:45,176 - benchmark - INFO -     Evaluating NOA_MONOTONIC...
+2026-02-19 05:44:45,365 - benchmark - INFO -     NOA_MONOTONIC evaluation complete → eval/train/constant/NOA_MONOTONIC
+2026-02-19 05:44:45,365 - benchmark - INFO -     Evaluating OLTW...
+2026-02-19 05:44:45,555 - benchmark - INFO -     OLTW evaluation complete → eval/train/constant/OLTW
+2026-02-19 05:44:45,555 - benchmark - INFO -     Evaluating DTW...
+2026-02-19 05:44:45,742 - benchmark - INFO -     DTW evaluation complete → eval/train/constant/DTW
+2026-02-19 05:44:45,743 - benchmark - WARNING - No experiments found for mode random, skipping.
+2026-02-19 05:44:45,743 - benchmark - WARNING - No experiments found for mode continuous, skipping.
+2026-02-19 05:44:45,743 - benchmark - INFO - Evaluation complete.

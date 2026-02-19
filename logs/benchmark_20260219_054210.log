@@ -1,0 +1,11 @@
+2026-02-19 05:42:10,658 - benchmark - INFO - Logging to logs/benchmark_20260219_054210.log
+2026-02-19 05:42:10,658 - benchmark - INFO - Removing existing scenarios directory: scenarios/train
+2026-02-19 05:42:10,658 - benchmark - INFO - Generating scenarios for 4 pieces, modes=['constant']
+2026-02-19 05:42:10,658 - benchmark - INFO -   Processing piece: rach2_mov1
+2026-02-19 05:42:10,715 - benchmark - INFO -   Processing piece: mozart21_mov1
+2026-02-19 05:42:10,780 - benchmark - INFO -   Processing piece: beeth1_mov1
+2026-02-19 05:42:10,844 - benchmark - INFO -   Processing piece: bach5_mov1
+2026-02-19 05:42:10,870 - benchmark - INFO -   constant: 75 scenarios → scenarios/train/constant/scenarios.summary
+2026-02-19 05:42:10,870 - benchmark - INFO -   random: 0 scenarios generated (mode may not have been requested)
+2026-02-19 05:42:10,870 - benchmark - INFO -   continuous: 0 scenarios generated (mode may not have been requested)
+2026-02-19 05:42:10,870 - benchmark - INFO - Scenario generation complete.

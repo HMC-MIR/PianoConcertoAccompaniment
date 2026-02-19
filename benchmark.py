@@ -240,7 +240,7 @@ def _verify_queries(queries_root, modes, mode_config, num_queries, logger):
             cfg = mode_config[mode]
             if mode == 'constant':
                 for tsm in cfg['tsm_factors']:
-                    tsm_dir = piece_dir / f'tsm{tsm:.2f}'
+                    tsm_dir = piece_dir / f'tsm{tsm}'
                     for f in tsm_dir.glob('*.wav'):
                         if f.stat().st_size == 0:
                             logger.warning(f'Empty wav file: {f}')

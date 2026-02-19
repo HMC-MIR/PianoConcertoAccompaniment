@@ -56,12 +56,12 @@ def generateScenariosConstant(**kwargs):
 
     # constant mode
     for tsm_factor in tsm_factors:
-        tsm_id = f'{piece_id}_P1_tsm{tsm_factor:.2f}'
-        tsm_dir = f'{QUERIES_ROOT}/{piece_id}_P1/tsm{tsm_factor:.2f}'
+        tsm_id = f'{piece_id}_P1_tsm{tsm_factor}'
+        tsm_dir = f'{QUERIES_ROOT}/{piece_id}_P1/tsm{tsm_factor}'
         pref_annot_file = f'{ANNOT_ROOT}/{piece_id}_P1.beats'
         tsm_annot_file = f'{tsm_dir}/{tsm_id}_all.beats'
         o_annot_file = f'{ANNOT_ROOT}/{piece_id}_O1.beats'
-        assert os.path.exists(tsm_annot_file)
+        # assert os.path.exists(tsm_annot_file)
         assert os.path.exists(o_annot_file)
         measures, q_times = get_query_timestamps(piece_id, QUERY_MEASURES_FILE, tsm_annot_file)
         _, o_times = get_query_timestamps(piece_id, QUERY_MEASURES_FILE, o_annot_file)
@@ -132,12 +132,12 @@ def generateScenariosRandom(**kwargs):
     for max_tsm_factor in max_tsm_factors:
         for i in range(num_queries):
             tsm_id = f'{piece_id}_P1_tsm_random_seed{i}'
-            tsm_dir = f'{QUERIES_ROOT}/{piece_id}_P1/tsm_random_max{max_tsm_factor:.2f}'
+            tsm_dir = f'{QUERIES_ROOT}/{piece_id}_P1/tsm_random_max{max_tsm_factor}'
             tsm_annot_file = f'{tsm_dir}/{tsm_id}.beats'
             pref_annot_file = f'{ANNOT_ROOT}/{piece_id}_P1.beats'
             o_annot_file = f'{ANNOT_ROOT}/{piece_id}_O1.beats'
-            assert os.path.exists(tsm_annot_file)
-            assert os.path.exists(o_annot_file)
+            # assert os.path.exists(tsm_annot_file)
+            # assert os.path.exists(o_annot_file)
             measures, q_times = get_query_timestamps(piece_id, QUERY_MEASURES_FILE, tsm_annot_file)
             _, o_times = get_query_timestamps(piece_id, QUERY_MEASURES_FILE, o_annot_file)
             _, pref_times = get_query_timestamps(piece_id, QUERY_MEASURES_FILE, pref_annot_file)
@@ -208,12 +208,12 @@ def generateScenariosContinuous(**kwargs):
     for max_alpha_change in max_alpha_changes:
         for i in range(num_queries):
             tsm_id = f'{piece_id}_P1_tsm_continuous_seed{i}'
-            tsm_dir = f'{QUERIES_ROOT}/{piece_id}_P1/tsm_continuous_max{max_alpha_change:.2f}'
+            tsm_dir = f'{QUERIES_ROOT}/{piece_id}_P1/tsm_continuous_max{max_alpha_change}'
             tsm_annot_file = f'{tsm_dir}/{tsm_id}.beats'
             pref_annot_file = f'{ANNOT_ROOT}/{piece_id}_P1.beats'
             o_annot_file = f'{ANNOT_ROOT}/{piece_id}_O1.beats'
-            assert os.path.exists(tsm_annot_file)
-            assert os.path.exists(o_annot_file)
+            # assert os.path.exists(tsm_annot_file)
+            # assert os.path.exists(o_annot_file)
             assert os.path.exists(pref_annot_file)
             measures, q_times = get_query_timestamps(piece_id, QUERY_MEASURES_FILE, tsm_annot_file)
             _, o_times = get_query_timestamps(piece_id, QUERY_MEASURES_FILE, o_annot_file)

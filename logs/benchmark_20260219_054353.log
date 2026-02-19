@@ -1,0 +1,19 @@
+2026-02-19 05:43:53,922 - benchmark - INFO - Logging to logs/benchmark_20260219_054353.log
+2026-02-19 05:43:53,924 - benchmark - INFO - Computing chroma STFT features for 16 audio files
+2026-02-19 05:43:53,928 - benchmark - DEBUG - Skipping rach2_mov1_P1 — already computed
+2026-02-19 05:43:53,928 - benchmark - DEBUG - Skipping rach2_mov1_O1 — already computed
+2026-02-19 05:43:53,928 - benchmark - DEBUG - Skipping rach2_mov1_PO1 — already computed
+2026-02-19 05:43:53,928 - benchmark - DEBUG - Skipping rach2_mov1_PO2 — already computed
+2026-02-19 05:43:53,928 - benchmark - DEBUG - Skipping mozart21_mov1_P1 — already computed
+2026-02-19 05:43:53,928 - benchmark - DEBUG - Skipping mozart21_mov1_O1 — already computed
+2026-02-19 05:43:53,928 - benchmark - DEBUG - Skipping mozart21_mov1_PO1 — already computed
+2026-02-19 05:43:53,928 - benchmark - WARNING - Audio file not found, skipping: audio/mozart21_mov1_PO2.wav
+2026-02-19 05:43:53,928 - benchmark - DEBUG - Skipping beeth1_mov1_P1 — already computed
+2026-02-19 05:43:53,928 - benchmark - DEBUG - Skipping beeth1_mov1_O1 — already computed
+2026-02-19 05:43:53,928 - benchmark - DEBUG - Skipping beeth1_mov1_PO1 — already computed
+2026-02-19 05:43:53,928 - benchmark - DEBUG - Skipping beeth1_mov1_PO2 — already computed
+2026-02-19 05:43:53,928 - benchmark - DEBUG - Skipping bach5_mov1_P1 — already computed
+2026-02-19 05:43:53,928 - benchmark - DEBUG - Skipping bach5_mov1_O1 — already computed
+2026-02-19 05:43:53,928 - benchmark - WARNING - Audio file not found, skipping: audio/bach5_mov1_PO1.wav
+2026-02-19 05:43:53,928 - benchmark - DEBUG - Skipping bach5_mov1_PO2 — already computed
+2026-02-19 05:43:53,929 - benchmark - INFO - Feature computation complete.
