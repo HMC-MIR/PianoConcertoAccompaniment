@@ -1,0 +1,11 @@
+2026-02-18 22:27:04,288 - benchmark - INFO - Logging to logs/benchmark_20260218_222704.log
+2026-02-18 22:27:04,288 - benchmark - INFO - ======================================================================
+2026-02-18 22:27:04,288 - benchmark - INFO - FULL PIPELINE: benchmark=train, systems=['DTW', 'NOA', 'NOA_MONOTONIC', 'OLTW', 'OLTW_GLOBAL']
+2026-02-18 22:27:04,288 - benchmark - INFO - ======================================================================
+2026-02-18 22:27:04,288 - benchmark - INFO - 
+======================================================================
+2026-02-18 22:27:04,288 - benchmark - INFO - STAGE 1: Query Generation
+2026-02-18 22:27:04,288 - benchmark - INFO - ======================================================================
+2026-02-18 22:27:04,288 - benchmark - INFO - Generating queries for benchmark=train, modes=['constant', 'random', 'continuous']
+2026-02-18 22:27:04,288 - benchmark - INFO -   Mode: constant
+2026-02-18 22:27:04,288 - benchmark - INFO -     tsm_factors=[0.8, 0.9, 1, 1.1, 1.25]

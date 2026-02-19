@@ -1,0 +1,11 @@
+{
+  "constant": {
+    "tsm_factors": [0.8, 0.9, 1, 1.1, 1.25]
+  },
+  "random": {
+    "max_tsm_factor": 2
+  },
+  "continuous": {
+    "max_alpha_change": 1.005
+  }
+}
