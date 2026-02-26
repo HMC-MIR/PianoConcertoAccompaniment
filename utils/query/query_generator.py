@@ -94,7 +94,7 @@ class QueryGenerator:
                     query_annot_file = f'{tsm_dir}/{query_id}.beats'
                     modify_annots_select(tsm_annot_file, query_annot_file, query_start, query_end)
                     
-    def generateQueriesRandom(self, outdir, max_tsm_factor: float, num_queries: int):
+    def generateQueriesRandom(self, outdir, max_tsm_factor: float, num_queries: int, num_chunks: int=30):
         """
         Generates time-scale modified audio queries and annotation files with random time-scale modification factors.
         
@@ -122,7 +122,7 @@ class QueryGenerator:
                 tsm_id = f'{base_id}_tsm_random_seed{i}' # e.g. rach2_mov1_P1_tsm_random_seed1
                 orig_audio_file = f'{self.audio_root}/{p_file}'
                 tsm_audio_file = f'{tsm_dir}/{tsm_id}.wav'
-                tsm_alignment = generate_tsm_audio_random(orig_audio_file, tsm_audio_file, max_tsm_factor, seed=i)
+                tsm_alignment = generate_tsm_audio_random(orig_audio_file, tsm_audio_file, max_tsm_factor, seed=i, num_chunks=num_chunks)
                 
                 # generate time-scale modified annotation file
                 orig_annot_file = f'{self.annot_root}/{base_id}.beats'

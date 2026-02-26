@@ -31,3 +31,6 @@ __pycache__
 *.tiff
 
 match/*
+
+logs/*
+

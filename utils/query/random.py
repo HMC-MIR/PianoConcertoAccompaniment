@@ -38,7 +38,7 @@ def build_alignment_random(alphas_tsm, frame_change_idx, length):
         
     return alignment / 22050, alphas # convert to seconds
 
-def generate_tsm_audio_random(infile, outfile, max_tsm_factor, seed):
+def generate_tsm_audio_random(infile, outfile, max_tsm_factor, seed, num_chunks=30):
     '''
     Applies time-scale modification to a given audio recording and saves the generated audio to file.
     
@@ -55,11 +55,21 @@ def generate_tsm_audio_random(infile, outfile, max_tsm_factor, seed):
     y, sr = lb.load(infile)
     frames_in_audio = len(y) // 512 # convert to TSM analysis frames
     
-    # generate random number of chunks
+    # generate chunk boundary indices
+    # If num_chunks is provided, use a fixed number of chunks; otherwise keep previous random behavior
+    if num_chunks is None:
+        interior_count = np.random.randint(10, 100)
+    else:
+        # num_chunks refers to the desired number of chunks (including the first and last segments).
+        # interior_count is the number of random interior boundaries between start and end.
+        if int(num_chunks) < 1:
+            raise ValueError('num_chunks must be >= 1')
+        interior_count = max(0, int(num_chunks) - 1)
+
     frame_change_idx = np.random.randint(
         low=1,
         high=frames_in_audio,
-        size=np.random.randint(10, 100),
+        size=interior_count,
     )
     
     # sort frame change indices, remove duplicates, and add beginning and end of audio
@@ -68,8 +78,9 @@ def generate_tsm_audio_random(infile, outfile, max_tsm_factor, seed):
     frame_change_idx = np.insert(frame_change_idx, 0, 0)
     frame_change_idx = np.append(frame_change_idx, frames_in_audio+1)
     
-    # create random time-scale modification factors
-    alphas_tsm = generate_alpha_random(max_tsm_factor, len(frame_change_idx), seed)
+    # create time-scale modification factors for the actual number of chunks
+    actual_num_chunks = len(frame_change_idx) - 1
+    alphas_tsm = generate_alpha_random(max_tsm_factor, actual_num_chunks, seed)
     
     # build alignment for TSM
     alignment, alphas = build_alignment_random(alphas_tsm, frame_change_idx, len(y))

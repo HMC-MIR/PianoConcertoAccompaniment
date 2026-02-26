@@ -2,18 +2,28 @@ name: PianoConcertoAccompaniment
 
 channels:
   - conda-forge
-  - anaconda
-  - defaults
+
 dependencies:
-  - python >=3.9,<3.10
+  - python >=3.11,<3.12
+  - pip
+
+  # notebooks
   - jupyter
-  - jupyterlab=4.0.12
-  - pandas=1.5
-  - importnb=2023.1
-  - librosa=0.10
-  - k3d=2.15.3
+  - jupyterlab >=4.0,<5
+
+  # core deps
+  - pandas >=2.0,<3
   - tqdm
+  - importnb >=2023.1
+
+  # audio
+  - librosa >=0.10,<0.11
+  - ffmpeg
+
+  # viz
+  - k3d ==2.15.3
+
   - pip:
-    - import-ipynb==0.1.4
-    - hmc_mir==0.1.15
-    - cython==3.0
+      - import-ipynb==0.1.4
+      - hmc_mir==0.1.15
+      - cython==3.0
