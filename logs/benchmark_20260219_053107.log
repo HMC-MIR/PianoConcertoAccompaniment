@@ -1,4 +1,0 @@
-2026-02-19 05:31:07,438 - benchmark - INFO - Logging to logs/benchmark_20260219_053107.log
-2026-02-19 05:31:07,439 - benchmark - INFO - Generating queries for benchmark=train, modes=['constant']
-2026-02-19 05:31:07,439 - benchmark - INFO -   Mode: constant
-2026-02-19 05:31:07,439 - benchmark - INFO -     tsm_factors=[0.8, 0.9, 1, 1.1, 1.25]

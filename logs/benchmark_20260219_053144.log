@@ -1,8 +1,0 @@
-2026-02-19 05:31:44,961 - benchmark - INFO - Logging to logs/benchmark_20260219_053144.log
-2026-02-19 05:31:44,962 - benchmark - INFO - Generating queries for benchmark=train, modes=['constant']
-2026-02-19 05:31:44,962 - benchmark - INFO -   Mode: constant
-2026-02-19 05:31:44,962 - benchmark - INFO -     tsm_factors=[0.8, 0.9, 1, 1.1, 1.25]
-2026-02-19 05:40:33,389 - benchmark - INFO -   constant queries complete.
-2026-02-19 05:40:33,389 - benchmark - INFO - Query generation complete.
-2026-02-19 05:40:33,389 - benchmark - INFO - Verifying generated queries...
-2026-02-19 05:40:33,391 - benchmark - INFO - Query verification passed.
