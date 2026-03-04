@@ -49,7 +49,7 @@ def offline_processing(scenario_dir, cache_dir, hop_length):
         raise FileNotFoundError(f'pref.wav missing in {scenario_dir}')
 
     y_pref, sr = lb.load(pref_file)
-    F_pref = lb.feature.chroma_stft(y=y_pref, sr=sr, hop_length=hop_length, center=False)
+    F_pref = lb.feature.chroma_stft(y=y_pref, sr=sr, hop_length=hop_length, center=False, norm=2)
     np.save(save_path, F_pref)
     logger.debug(f'NOA offline: saved features to {save_path}')
 

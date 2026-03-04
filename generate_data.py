@@ -36,7 +36,7 @@ class DataGenerator:
     # Default configuration values
     DEFAULT_TSM_FACTORS = [0.8, 0.9, 1.0, 1.1, 1.25]
     DEFAULT_MAX_TSM_FACTOR = 2
-    DEFAULT_MAX_ALPHA_CHANGE = 1.002
+    DEFAULT_MAX_ALPHA_CHANGE = 1.005
     DEFAULT_NUM_QUERIES_TRAIN = 5
     DEFAULT_NUM_QUERIES_TEST = 10
     
