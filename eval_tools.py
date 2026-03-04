@@ -30,7 +30,7 @@ def getEvalMeasureSet(scenarioInfo):
     
     Returns a sorted list of measure numbers.
     '''
-    d = system_utils.get_scenario_info(scenarioInfo)
+    d = system_utils.get_scenario_info(scenarioInfo, input_type="info")
     o_basename = os.path.splitext(os.path.basename(d['o']))[0] # e.g. rach2_mov1_O1
     mov_id = '_'.join(o_basename.split('_')[0:2]) # e.g. rach2_mov1
     measureSet = system_utils.get_eval_measure_set(mov_id)
@@ -104,7 +104,7 @@ def getScenarioIds(scenarios_dir):
     Returns a list of scenario ids, sorted in increasing order.
     '''
     summary_file = f'{scenarios_dir}/scenarios.summary'
-    d = system_utils.get_scenario_info(summary_file)
+    d = system_utils.get_scenario_info(summary_file, input_type="summary")
     return list(d.keys())
 
 def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', piece_filter = None):
@@ -130,7 +130,7 @@ def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', piec
         # Apply piece filter if specified
             if piece_filter is not None:
                 scenarioInfo = f'{scenarios_dir}/{scenario_id}/scenario.info'
-                scenario_data = system_utils.get_scenario_info(scenarioInfo)
+                scenario_data = system_utils.get_scenario_info(scenarioInfo, input_type="info")
                 piece_id = os.path.basename(scenario_data['p']).split('_')[0]  # Extract piece ID from filename
                 if piece_filter.lower() not in piece_id.lower():
                     continue

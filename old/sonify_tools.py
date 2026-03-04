@@ -140,7 +140,7 @@ def sonifyWithTSMSync_batch(scenarios_dir, exp_dir, downsample, hop_len, outdir)
         os.makedirs(outdir)
     
     summary_file = f'{scenarios_dir}/scenarios.summary'
-    scenario_ids = system_utils.get_scenario_info(summary_file).keys()
+    scenario_ids = system_utils.get_scenario_info(summary_file, input_type="summary").keys()
 
     with Pool() as pool:
         pool.starmap(singleSonifyWithTSMSync_batch, [(scenario_id, scenarios_dir, downsample, hop_len, outdir, exp_dir) for scenario_id in scenario_ids])

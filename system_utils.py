@@ -43,7 +43,7 @@ def get_orchestra_start_end_times(scenario_dir):
     
     # get orchestra recording basename
     scenario_info_file = f'{scenario_dir}/scenario.info'
-    si = get_scenario_info(scenario_info_file)
+    si = get_scenario_info(scenario_info_file, input_type="info")
     orch_id = os.path.splitext(os.path.basename(si['o']))[0] # e.g. rach2_mov1_O1
         
     # get start & end timestamps
@@ -69,7 +69,7 @@ def get_orchestra_query_boundaries(scenario_dir):
     info_file = f'{scenario_dir}/scenario.info'
     assert os.path.exists(info_file)
     
-    d = get_scenario_info(info_file)
+    d = get_scenario_info(info_file, input_type="info")
     orch_start_sec = d['oStart']
     orch_end_sec = d['oEnd']
     
@@ -89,7 +89,7 @@ def get_piano_query_boundaries(scenario_dir):
     info_file = f'{scenario_dir}/scenario.info'
     assert os.path.exists(info_file)
     
-    d = get_scenario_info(info_file)
+    d = get_scenario_info(info_file, input_type="info")
     p_start_sec = d['pStart']
     p_end_sec = d['pEnd']
     
@@ -109,19 +109,20 @@ def get_piano_reference_boundaries(scenario_dir):
     info_file = f'{scenario_dir}/scenario.info'
     assert os.path.exists(info_file)
     
-    d = get_scenario_info(info_file)
+    d = get_scenario_info(info_file, input_type="info")
     p_start_sec = d['prefStart']
     p_end_sec = d['prefEnd']
     
     return p_start_sec, p_end_sec
 
 # %%
-def get_scenario_info(infile):
+def get_scenario_info(infile, input_type = "summary"):
     '''
     Parses a scenarios summary (multiple) or info (single) file and returns the information as a dictionary.
     
     Inputs
     infile: filepath specifying the scenarios.summary or scenario.info file to parse
+    input_type: type of input file, "summary" or "info"
     
     If a summary file is specified, returns a nested dictionary whose primary key is the scenario 
     id (e.g. 's1'), and whose secondary key is one of the following:
@@ -159,11 +160,13 @@ def get_scenario_info(infile):
             d[sid]['prefStart'] = float(parts[10])
             d[sid]['prefEnd'] = float(parts[11])
             
-    if len(d) == 1: # info file
+    if input_type == "info":
         d[sid]['scenario_id'] = sid
         return d[sid]
-    else: # summary file
+    elif input_type == "summary":
         return d
+    else:
+        raise ValueError(f"Invalid input type: {input_type}")
 
 # %%
 def get_audio_summary_info():
