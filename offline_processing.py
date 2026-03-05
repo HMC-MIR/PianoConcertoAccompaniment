@@ -139,8 +139,9 @@ def offline_processing(system, modes=None, benchmark='train'):
         modes = ['constant', 'random', 'continuous']
         for mode in modes:
             scenario_root = os.path.join("scenarios", benchmark, mode)
-            if system == 'DTW' or system == 'NOA' or system == 'NOA-MONOTONIC' or system == 'OLTW-GLOBAL':
-                compute_features(scenario_root)
-            elif system == 'OLTW':
+            if system == 'OLTW':
                 oltw_offline_processing(scenario_root)
+            else:
+                compute_features(scenario_root)
     return
+
