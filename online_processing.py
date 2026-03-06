@@ -190,6 +190,10 @@ def run_oltw_global(scenario_path, out_dir, p_ref_cache_dir, ref_start_time, hop
     
     # convert to seconds
     wp_sec = wp * hop_sec
+    
+    # add offset to wp_sec
+    wp_sec[1, :] += ref_start_time
+    
     np.save(f'{out_dir}/hyp.npy', wp_sec)
     logger.info("OLTW-GLOBAL | saved hyp -> %s/hyp.npy", out_dir)
 
