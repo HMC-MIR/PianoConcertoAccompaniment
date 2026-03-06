@@ -1,8 +1,7 @@
 import logging
 import os
-from noa import compute_cosine_distance
 import librosa as lb
-from numba import jit, prange
+from numba import jit, njit, prange
 import numpy as np
 import system_utils
 
@@ -16,6 +15,22 @@ from online_alignment.constants import DEFAULT_DTW_STEPS, DEFAULT_DTW_WEIGHTS, O
 
 DEFAULT_SR = 22050
 DEFAULT_HOP_LENGTH = 512
+
+@njit(cache=True)
+def compute_cosine_distance(feature_row, reference_features):
+    """Compute cosine distance between normalized feature vectors.
+
+    Assumes both feature_row and reference_features are already normalized (unit vectors).
+    For normalized vectors, cosine distance = 1 - dot_product.
+    """
+    costs = np.empty(reference_features.shape[1], dtype=np.float32)
+
+    for j in range(reference_features.shape[1]):
+        ref_col = reference_features[:, j]
+        dot_product = np.sum(feature_row * ref_col)
+        costs[j] = 1.0 - dot_product
+
+    return costs
 
 def verify_cache_dir(indir):
     '''
