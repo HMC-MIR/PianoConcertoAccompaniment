@@ -149,7 +149,7 @@ def parse_oltw_alignment(infile):
     return alignment_data
 
 
-def online_processing(scenario_dir, out_dir, cache_dir, hop_length, jar_path=None):
+def online_processing(scenario_dir, out_dir, hop_length, jar_path=None):
     """
     Online processing for the OLTW system.
 
@@ -160,7 +160,6 @@ def online_processing(scenario_dir, out_dir, cache_dir, hop_length, jar_path=Non
     Args:
         scenario_dir: Path to the scenario directory.
         out_dir: Path to the output directory (will be created).
-        cache_dir: Path to the cache directory (not used for OLTW, kept for compatibility).
         hop_length: Hop length in samples (used for frame-to-second conversion).
         jar_path: Path to PerformanceMatcher.jar. Defaults to match/PerformanceMatcher.jar.
 
@@ -175,7 +174,6 @@ def online_processing(scenario_dir, out_dir, cache_dir, hop_length, jar_path=Non
     java_cmd = verify_oltw_installation(jar_path)
 
     system_utils.verify_scenario_dir(scenario_dir)
-    os.makedirs(cache_dir, exist_ok=True)
     assert not os.path.exists(out_dir), f'Output directory {out_dir} already exists.'
     os.makedirs(out_dir)
 

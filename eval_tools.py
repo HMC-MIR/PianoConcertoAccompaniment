@@ -85,8 +85,7 @@ def calcAlignErrors_single(hypfile, annotfile1, annotfile2, scenarioInfo, frames
         return None, None
     # check if hypfile exists
     if not os.path.exists(hypfile):
-        print(f'{hypfile} does not exist')
-        return None, None
+        raise FileNotFoundError(f'{hypfile} does not exist')
     hypalign = np.load(hypfile) # piano-orchestra predicted alignment in sec
     if frames:
         hypalign = hypalign / (22050/512)
@@ -148,7 +147,11 @@ def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', piec
         pianoAnnot = f'{scenarios_dir}/{scenario_id}/p.beats'
         orchAnnot = f'{scenarios_dir}/{scenario_id}/o.beats'
         scenarioInfo = f'{scenarios_dir}/{scenario_id}/scenario.info'
-        errs, measNums = calcAlignErrors_single(hypFile, pianoAnnot, orchAnnot, scenarioInfo)
+        try:
+            errs, measNums = calcAlignErrors_single(hypFile, pianoAnnot, orchAnnot, scenarioInfo)
+        except FileNotFoundError:
+            print(f'{hypFile} does not exist, skipping scenario {scenario_id}')
+            continue
         if errs is not None:
             d[scenario_id] = (errs, measNums) # key: scenario_id, value: (errors, measureNums)
 

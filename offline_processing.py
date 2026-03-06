@@ -1,14 +1,18 @@
 import system_utils
 import os
+import logging
 import librosa as lb
 import numpy as np
 from scipy.io.wavfile import write
+from tqdm import tqdm
 
-""""
-This module contains functions for offline processing. This will contain funcitons that
+"""
+This module contains functions for offline processing. This will contain functions that
 compute features, then saving them to their respective folders.
 features saved in features/
 """
+
+logger = logging.getLogger(__name__)
 
 def getCacheDir(d, scenario_id):
     '''Inputs:
@@ -37,9 +41,9 @@ def compute_features(scenario_root, feature_mode='chroma_stft_norm2', hop_length
     scenario_summary_dir = f'{scenario_root}/scenarios.summary'
     d = system_utils.get_scenario_info(scenario_summary_dir, input_type="summary")
 
-    print(f'Processing {len(d)} scenarios in {scenario_root}')
+    logger.info('Processing %d scenarios in %s', len(d), scenario_root)
 
-    for i in range(len(d)):
+    for i in tqdm(range(len(d)), desc="compute_features", unit="scenario"):
         s_id = f's{i+1}'
         scenario_dir = f'{scenario_root}/{s_id}'
 
@@ -59,7 +63,7 @@ def compute_features(scenario_root, feature_mode='chroma_stft_norm2', hop_length
         if not os.path.exists(save_pref_dir):
             pref_file = f'{scenario_dir}/pref.wav'
             if os.path.exists(pref_file):
-                print(f'[{s_id}] Computing p_ref for {piece_id}...')
+                logger.debug('[%s] Computing p_ref for %s...', s_id, piece_id)
                 y_pref, _ = lb.load(pref_file)
                 F_pref = lb.feature.chroma_stft(y=y_pref, 
                                                 sr=22050, 
@@ -68,11 +72,11 @@ def compute_features(scenario_root, feature_mode='chroma_stft_norm2', hop_length
                                                 norm=2)
                 np.save(save_pref_dir, F_pref)
         else:
-            print(f'[{s_id}] p_ref already exists in cache.')
+            logger.debug('[%s] p_ref already exists in cache.', s_id)
         if not os.path.exists(save_pquery_dir):
             pquery_file = f'{scenario_dir}/p.wav'
             if os.path.exists(pquery_file):
-                print(f'[{s_id}] Computing p_query for {piece_id}...')
+                logger.debug('[%s] Computing p_query for %s...', s_id, piece_id)
                 y_pquery, _ = lb.load(pquery_file)
                 F_pquery = lb.feature.chroma_stft(y=y_pquery, 
                                                 sr=22050, 
@@ -81,9 +85,9 @@ def compute_features(scenario_root, feature_mode='chroma_stft_norm2', hop_length
                                                 norm=2)
                 np.save(save_pquery_dir, F_pquery)
             else:
-                print(f'[{s_id}] Warning: p.wav not found')
+                logger.warning('[%s] p.wav not found', s_id)
         else:
-            print(f'[{s_id}] p_query already exists.')
+            logger.debug('[%s] p_query already exists.', s_id)
 
 def oltw_offline_processing(scenario_root, hop_length=512):
     '''
@@ -98,9 +102,9 @@ def oltw_offline_processing(scenario_root, hop_length=512):
     scenario_summary_dir = f'{scenario_root}/scenarios.summary'
     d = system_utils.get_scenario_info(scenario_summary_dir, input_type="summary")
 
-    print(f'Processing {len(d)} scenarios in {scenario_root}')
+    logger.info('Processing %d scenarios in %s', len(d), scenario_root)
 
-    for i in range(len(d)):
+    for i in tqdm(range(len(d)), desc="oltw_offline", unit="scenario"):
         s_id = f's{i+1}'
         scenario_dir = f'{scenario_root}/{s_id}'
 
@@ -125,7 +129,7 @@ def oltw_offline_processing(scenario_root, hop_length=512):
             out_path = os.path.join(scenario_dir, "pref_chopped.wav")
             write(out_path, sr_ref, (y_chopped * 32767).astype("int16"))  # 16-bit PCM
         else:
-            print(f'[{s_id}] pref_chopped.wav exists already, ready for OLTW alignment.')
+            logger.debug('[%s] pref_chopped.wav exists already, ready for OLTW alignment.', s_id)
         
 
 def offline_processing(system, modes=None, benchmark='train'):
@@ -137,11 +141,26 @@ def offline_processing(system, modes=None, benchmark='train'):
     '''
     if modes == None:
         modes = ['constant', 'random', 'continuous']
-        for mode in modes:
-            scenario_root = os.path.join("scenarios", benchmark, mode)
-            if system == 'OLTW':
-                oltw_offline_processing(scenario_root)
-            else:
-                compute_features(scenario_root)
-    return
+    for mode in tqdm(modes, desc=f"offline_processing ({system})", unit="mode"):
+        scenario_root = os.path.join("scenarios", benchmark, mode)
+        if system == 'OLTW':
+            oltw_offline_processing(scenario_root)
+        else:
+            compute_features(scenario_root)
 
+if __name__ == "__main__":
+    from datetime import datetime
+    os.makedirs("logs", exist_ok=True)
+    log_file = f"logs/offline_processing_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+    format_str = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    handlers = [
+        logging.FileHandler(log_file),
+        logging.StreamHandler(),
+    ]
+    logging.basicConfig(level=logging.WARNING, format=format_str, handlers=handlers)
+    logger.info("Logging to %s", log_file)
+    systems = ['DTW', 'NOA', 'NOA-MONOTONIC', 'OLTW', 'OLTW-GLOBAL']
+    modes = ['constant', 'random', 'continuous']
+    benchmark = 'train'
+    for system in tqdm(systems, desc="Systems", unit="system"):
+        offline_processing(system, modes, benchmark)
