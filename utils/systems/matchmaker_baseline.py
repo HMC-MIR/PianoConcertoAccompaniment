@@ -89,8 +89,9 @@ def online_processing(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, me
     """
     python_cmd = verify_matchmaker_installation(python_path)
 
-    assert not os.path.exists(out_dir), f'Output directory {out_dir} already exists.'
-    os.makedirs(out_dir)
+    # exist_ok, and cleaned up on failure: the worker is a subprocess with many ways to
+    # fail, and a leftover empty directory would trip the caller's assert on every retry
+    os.makedirs(out_dir, exist_ok=True)
 
     cmd = [
         python_cmd, WORKER_PATH,
@@ -109,6 +110,8 @@ def online_processing(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, me
 
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     if result.returncode != 0:
+        if not os.listdir(out_dir):
+            os.rmdir(out_dir)
         raise RuntimeError(f'MatchMaker worker failed for {scenario_dir}:\n{result.stderr}')
 
     logger.debug(f'MatchMaker {method} online: saved hyp.npy to {out_dir}')
