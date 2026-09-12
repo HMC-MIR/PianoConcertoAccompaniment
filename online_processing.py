@@ -8,7 +8,7 @@ import system_utils
 logger = logging.getLogger(__name__)
 
 
-from utils.systems import online_processing_oltw
+from utils.systems import online_processing_oltw, online_processing_matchmaker
 from hmc_mir.align import dtw
 from online_alignment import run_offline_noa, run_offline_oltw
 from online_alignment.constants import DEFAULT_DTW_STEPS, DEFAULT_DTW_WEIGHTS, OLTW_STEPS, OLTW_WEIGHTS, NOA_STEPS, NOA_WEIGHTS
@@ -212,6 +212,25 @@ def run_oltw_global(scenario_path, out_dir, p_ref_cache_dir, ref_start_time, hop
     np.save(f'{out_dir}/hyp.npy', wp_sec)
     logger.info("OLTW-GLOBAL | saved hyp -> %s/hyp.npy", out_dir)
 
+def run_matchmaker(scenario_path, out_dir, p_ref_cache_dir, ref_start_time, method, hop_length = DEFAULT_HOP_LENGTH, sr = DEFAULT_SR, window_size = 10.0, distance_metric = 'cosine', step_size = None):
+    '''
+    Carries out the online processing for a MatchMaker OLTW baseline.
+    Inputs:
+    scenario_path -- str, path to a single scenario file
+    out_dir -- str, directory to where the .hyp will be saved
+    p_ref_cache_dir -- str, path to where the features are stored
+    ref_start_time -- float, start time of the reference in seconds
+    method -- str, 'dixon' or 'arzt'
+    '''
+    logger.info("MATCHMAKER-%s | scenario=%s  out=%s  ref_start=%.3fs", method.upper(), scenario_path, out_dir, ref_start_time)
+    system_utils.verify_scenario_dir(scenario_path)
+    verify_cache_dir(p_ref_cache_dir)
+
+    online_processing_matchmaker(scenario_path, out_dir, p_ref_cache_dir, ref_start_time, method,
+                                 hop_length=hop_length, sr=sr, window_size=window_size,
+                                 distance_metric=distance_metric, step_size=step_size)
+    logger.info("MATCHMAKER-%s | saved hyp -> %s/hyp.npy", method.upper(), out_dir)
+
 def run_oltw(scenario_path, out_dir, hop_length):
     logger.info("OLTW | scenario=%s  out=%s", scenario_path, out_dir)
     online_processing_oltw(scenario_path, out_dir, hop_length, jar_path=None)
@@ -224,7 +243,7 @@ if __name__ == "__main__":
 
     VALID_BENCHMARKS = ["train"]
     VALID_MODES = ["constant", "continuous", "random"]
-    VALID_SYSTEMS = ["DTW", "NOA", "NOA-MONO", "OLTW", "OLTW-GLOBAL"]
+    VALID_SYSTEMS = ["DTW", "NOA", "NOA-MONO", "OLTW", "OLTW-GLOBAL", "MM-DIXON", "MM-ARZT"]
 
     parser = argparse.ArgumentParser(
         description="Run online alignment processing for a given benchmark, mode, and system.",
@@ -346,6 +365,10 @@ if __name__ == "__main__":
                             run_oltw(scenario_dir, out_dir, hop_length)
                         elif system == "OLTW-GLOBAL":
                             run_oltw_global(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, hop_length=hop_length, sr=sr)
+                        elif system == "MM-DIXON":
+                            run_matchmaker(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, "dixon", hop_length=hop_length, sr=sr)
+                        elif system == "MM-ARZT":
+                            run_matchmaker(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, "arzt", hop_length=hop_length, sr=sr, step_size=3)
                     except Exception:
                         logger.exception("Error processing %s — skipping", scenario_id)
 
