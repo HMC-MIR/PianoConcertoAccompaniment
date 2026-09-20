@@ -63,7 +63,7 @@ def verify_matchmaker_installation(python_path=None):
 
 def online_processing(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, method,
                       hop_length, sr, window_size=10.0, distance_metric='cosine',
-                      step_size=None, python_path=None):
+                      step_size=None, readout='reduced', python_path=None):
     """
     Online processing for a MatchMaker OLTW baseline.
 
@@ -82,6 +82,7 @@ def online_processing(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, me
         window_size: Search window in seconds.
         distance_metric: 'cosine' or 'euclidean'.
         step_size: Max reference frames advanced per query frame (arzt only).
+        readout: 'reduced' or 'raw' (dixon only). See matchmaker_worker.READOUTS.
         python_path: Path to the matchmaker env python interpreter.
 
     Raises:
@@ -104,6 +105,7 @@ def online_processing(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, me
         '--window-size', str(window_size),
         '--distance-metric', distance_metric,
         '--ref-start-sec', str(ref_start_time),
+        '--readout', readout,
     ]
     if step_size is not None:
         cmd += ['--step-size', str(step_size)]

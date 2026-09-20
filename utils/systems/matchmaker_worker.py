@@ -1,5 +1,6 @@
 """
-Worker for the MatchMaker OLTW baselines. Runs inside the `matchmaker` conda env.
+Worker for the MatchMaker OLTW baselines (Dixon and Arzt). Runs inside the
+`matchmaker` conda env.
 
 pymatchmaker pins numpy<2, so it cannot share a process with the benchmark env.
 This script is invoked as a subprocess and communicates only through .npy files.
@@ -9,6 +10,9 @@ package, since the worker's own directory is first on sys.path.
 MatchMaker's frame-level followers are score followers, but their position axis is
 just an array of floats. Setting it to reference timestamps makes them report
 reference seconds, which is what the benchmark's hyp.npy expects.
+
+Dixon's alignment_path can be read out two ways, which give different results. See
+--readout.
 """
 
 import argparse
@@ -21,6 +25,30 @@ from matchmaker.dp import OnlineTimeWarpingArztFrame, OnlineTimeWarpingDixonFram
 EXPECTED_VERSION = '0.3.0'
 
 FOLLOWERS = {'dixon': OnlineTimeWarpingDixonFrame, 'arzt': OnlineTimeWarpingArztFrame}
+
+# reduced: one estimate per query time, via reduce_to_query_time. Matches what
+#          matchmaker's own evaluation does.
+# raw:     alignment_path as recorded. Both rows are frontier argmin coordinates, so
+#          neither axis is monotone.
+READOUTS = ('reduced', 'raw')
+
+
+def check_readout(readout, method):
+    """
+    Validates the requested readout for the given follower.
+
+    Only Dixon distinguishes the two. Arzt records the caller's real timestamp, so its
+    path is already one increasing estimate per query frame and both readouts give the
+    same thing; asking for raw there is a mistake, so it raises.
+    """
+    if readout not in READOUTS:
+        raise ValueError(f'Unknown readout {readout!r}; choose from {list(READOUTS)}')
+    if method != 'dixon' and readout != 'reduced':
+        raise ValueError(
+            f'Only dixon has distinct readouts; {method} inherits the base __call__ and '
+            'supports --readout reduced only.'
+        )
+    return readout
 
 
 def verify_version():
@@ -36,14 +64,12 @@ def verify_version():
 
 def reduce_to_query_time(wp):
     """
-    Collapses an alignment path to one reference estimate per query time, in increasing order.
+    Collapses an alignment path to one reference estimate per query time.
 
-    Dixon records the frontier argmin at each step, which is recomputed over the whole
-    band and can move backwards in both axes, so its raw path is not a function of query
-    time. eval_tools feeds row 0 to np.interp, which silently returns nonsense unless it
-    is increasing. This mirrors matchmaker's own transfer_positions: order by query time
-    and keep the tracker's last decision for each one. Arzt is already strictly
-    increasing, so this is a no-op for it.
+    Dixon's path can move backwards in both axes, and eval_tools feeds row 0 to
+    np.interp, which silently returns nonsense unless it is increasing. Ordering by
+    query time and keeping the last estimate for each mirrors matchmaker's own
+    transfer_positions. Arzt is already increasing, so this is a no-op for it.
 
     Inputs
     wp: a 2xN array, row 0 query seconds, row 1 reference seconds
@@ -56,7 +82,8 @@ def reduce_to_query_time(wp):
     return np.vstack((query[last_of_run], reference[last_of_run]))
 
 
-def align(ref_feat, query_feat, method, frame_rate, window_size, step_size, distance_metric):
+def align(ref_feat, query_feat, method, frame_rate, window_size, step_size, distance_metric,
+          readout='reduced'):
     """
     Aligns query features against reference features using a MatchMaker OLTW follower.
 
@@ -68,6 +95,7 @@ def align(ref_feat, query_feat, method, frame_rate, window_size, step_size, dist
     window_size: search window in seconds
     step_size: max reference frames advanced per query frame (arzt only)
     distance_metric: 'cosine' or 'euclidean'
+    readout: 'reduced' or 'raw', see READOUTS
 
     Returns a 2xN array indicating the estimated alignment in seconds.
     """
@@ -102,6 +130,12 @@ def align(ref_feat, query_feat, method, frame_rate, window_size, step_size, dist
     if wp.shape[1] > 0 and wp[0].max() > query_dur + 1.0:
         raise RuntimeError('Query times exceed the query duration; check the alignment_path row order.')
 
+    if readout == 'raw':
+        # Returned unsorted on purpose. The query axis is not monotone, so downstream
+        # np.interp gives error numbers that are not interpretable as accuracy. This
+        # readout exists to show what a consumer of alignment_path actually gets.
+        return wp
+
     wp = reduce_to_query_time(wp) if wp.shape[1] else wp
     if wp.shape[1] > 1 and np.any(np.diff(wp[0]) <= 0):
         raise RuntimeError('Query times are not strictly increasing; np.interp would be invalid.')
@@ -122,7 +156,11 @@ def main():
     parser.add_argument('--distance-metric', default='cosine', choices=['cosine', 'euclidean'])
     parser.add_argument('--ref-start-sec', type=float, default=0.0,
                         help='chop this much off the front of the reference and add it back to the result')
+    parser.add_argument('--readout', default='reduced', choices=list(READOUTS),
+                        help='dixon only; raw writes alignment_path unreduced')
     args = parser.parse_args()
+
+    check_readout(args.readout, args.method)
 
     verify_version()
 
@@ -130,8 +168,9 @@ def main():
     ref_feat = np.load(args.ref_feat)[:, int(args.ref_start_sec / hop_sec):]
     query_feat = np.load(args.query_feat)
 
-    wp = align(ref_feat, query_feat, args.method, args.sr / args.hop_length,
-               args.window_size, args.step_size, args.distance_metric)
+    frame_rate = args.sr / args.hop_length
+    wp = align(ref_feat, query_feat, args.method, frame_rate,
+               args.window_size, args.step_size, args.distance_metric, args.readout)
     wp[1, :] += args.ref_start_sec
 
     np.save(args.out, wp)
