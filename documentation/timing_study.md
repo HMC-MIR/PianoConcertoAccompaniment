@@ -1,7 +1,7 @@
 # Per-Frame Timing Study
 
-This document records the per-frame latency measurements for SOA (called NOA in the
-code) and the MatchMaker OLTW baselines.
+This document records the per-frame latency measurements for SOA and the MatchMaker
+OLTW baselines.
 
 SOA has no local search window, so its per-frame cost grows with the reference length
 `N`. The measurements below show that it grows linearly, at roughly ten nanoseconds per
@@ -35,16 +35,16 @@ complexity argument, since every online method including OLTW pays it.
 
 `timing_benchmark.py` will not report timings for an algorithm it has not first checked.
 `validate_against_offline()` runs the streaming implementation and the shipped
-`OfflineNOA` on the same inputs and requires the integer alignment paths to be
+`OfflineSOA` on the same inputs and requires the integer alignment paths to be
 identical; the script aborts if they differ.
 
-The streaming implementation is bit-exact against `OfflineNOA` on all four benchmark
+The streaming implementation is bit-exact against `OfflineSOA` on all four benchmark
 pieces (N up to 10000, query length up to 2000). These are therefore timings for the
 algorithm that produced the accuracy results, not for a lookalike.
 
 ## Why a separate implementation exists
 
-`OfflineNOA.align` pre-allocates `D` and `B` at `(2N, N)`. At a 60-minute reference
+`OfflineSOA.align` pre-allocates `D` and `B` at `(2N, N)`. At a 60-minute reference
 (N = 155039) that is about 192 GB for `D` alone, and as much again for `B`. It cannot be
 run at the lengths these measurements concern.
 

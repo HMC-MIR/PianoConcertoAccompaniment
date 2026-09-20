@@ -135,7 +135,7 @@ def oltw_offline_processing(scenario_root, hop_length=512):
 def offline_processing(system, modes=None, benchmark='train'):
     '''
     Overall pipeline, where the processes are done specific to the system
-    system -- str, includes 'DTW', 'NOA', 'NOA-MONOTONIC', 'OLTW' and 'OLTW-GLOBAL'
+    system -- str, includes 'DTW', 'SOA', 'SOA-MONOTONIC', 'OLTW' and 'OLTW-GLOBAL'
     modes -- an array of strings, but default checks constant, random, and continuous modes.
     benchmark -- str, can be 'train' or 'test'
     '''
@@ -159,7 +159,7 @@ if __name__ == "__main__":
     ]
     logging.basicConfig(level=logging.WARNING, format=format_str, handlers=handlers)
     logger.info("Logging to %s", log_file)
-    systems = ['DTW', 'NOA', 'NOA-MONOTONIC', 'OLTW', 'OLTW-GLOBAL']
+    systems = ['DTW', 'SOA', 'SOA-MONOTONIC', 'OLTW', 'OLTW-GLOBAL']
     modes = ['constant', 'random', 'continuous']
     benchmark = 'train'
     for system in tqdm(systems, desc="Systems", unit="system"):

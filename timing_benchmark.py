@@ -5,13 +5,13 @@ SOA has no local search window, so its per-frame cost is O(N) in the reference l
 These measurements show what that costs against the 23.2 ms frame period, for
 references far longer than any concerto movement.
 
-Why this file exists rather than timing OfflineNOA directly: OfflineNOA pre-allocates
+Why this file exists rather than timing OfflineSOA directly: OfflineSOA pre-allocates
 D and B at (2N, N), which is ~192 GB at a 60-minute reference, so it cannot be run at
 the lengths of interest. The streaming version here keeps only the three most recent
 rows of D, and validate_against_offline() checks it produces the same path as
-OfflineNOA at a size where OfflineNOA can actually run.
+OfflineSOA at a size where OfflineSOA can actually run.
 
-Normalization matches the shipped code (noa.py:71): the path length divisor is
+Normalization matches the shipped code (soa.py:71): the path length divisor is
 (t+1)+(j+1), i.e. every path is assumed to start at reference position 0.
 
 Run:
@@ -53,7 +53,7 @@ QUERY_SCENARIO = 'scenarios/train/constant/s1/pquery_stft.npy'
 def soa_update(t, C, D, cur, prev1, prev2, N):
     """Updates one query frame of SOA, keeping only the three most recent rows of D.
 
-    Mirrors _update_alignment_row_norm in online_alignment's OfflineNOA, including
+    Mirrors _update_alignment_row_norm in online_alignment's OfflineSOA, including
     its treatment of unreachable cells: when no incoming step is finite the cell is
     left at infinity and cannot win the position argmin.
 
@@ -151,19 +151,19 @@ def soa_stream(ref, query, monotonic=False):
 
 
 def validate_against_offline(n_ref=6000, n_query=600):
-    """Checks the streaming update reproduces OfflineNOA on a size OfflineNOA can run.
+    """Checks the streaming update reproduces OfflineSOA on a size OfflineSOA can run.
 
-    OfflineNOA allocates (2*n_ref, n_ref) float32 plus the same in int32, so n_ref is
+    OfflineSOA allocates (2*n_ref, n_ref) float32 plus the same in int32, so n_ref is
     kept small enough that this fits comfortably in RAM.
     """
-    from online_alignment import run_offline_noa
+    from online_alignment import run_offline_soa
 
     ref = np.load(f'features/{PIECE_IDS[0]}/chroma_stft_norm2/{PIECE_IDS[0]}.features.npy')
     query = np.load(QUERY_SCENARIO)
     ref = np.ascontiguousarray(ref[:, :n_ref])
     query = np.ascontiguousarray(query[:, :n_query])
 
-    expected = run_offline_noa(ref, query)
+    expected = run_offline_soa(ref, query)
     actual = soa_stream(ref, query)
 
     if expected.shape != actual.shape:
@@ -362,7 +362,7 @@ def write_report(results, path):
         f"Python {env['python']}, NumPy {env['numpy']}, numba {env['numba']}, {env['dtype']} features.",
         '',
         'Normalization matches the shipped implementation (path length `(t+1)+(j+1)`), and the',
-        'streaming update is bit-exact against `OfflineNOA` on all four benchmark pieces.',
+        'streaming update is bit-exact against `OfflineSOA` on all four benchmark pieces.',
         '',
         '| Reference | N | Cost row (ms) | DP update (ms) | Total median (ms) | p95 | max | ns per ref frame | × under real time |',
         '|---|---|---|---|---|---|---|---|---|',
@@ -486,9 +486,9 @@ def main():
     if not args.skip_validation:
         ok, detail = validate_against_offline()
         results['validation'] = {'passed': ok, 'detail': detail}
-        print(f"validation vs OfflineNOA: {'PASS' if ok else 'FAIL'} — {detail}\n")
+        print(f"validation vs OfflineSOA: {'PASS' if ok else 'FAIL'} — {detail}\n")
         if not ok:
-            raise SystemExit('Streaming SOA does not match OfflineNOA; timings would be meaningless.')
+            raise SystemExit('Streaming SOA does not match OfflineSOA; timings would be meaningless.')
 
     query = np.ascontiguousarray(np.load(QUERY_SCENARIO), dtype=np.float32)
 

@@ -14,7 +14,7 @@ DTW online processing is not actually online because DTW is intrinsically an off
 
 We first verify our dicrectory structure. Then, we compute the `features` for the query input. We load in the `features` for the reference that we computed during offline processing. We calculate the cosine distance between the query and the reference. We then run subsequence DTW on this cost matrix, convert the path from frames to seconds, and save it to `{out_dir}/hyp.npy`.
 
-## NOA/NOA_MONOTONIC
+## SOA/SOA_MONOTONIC
 
 ### Offline Processing
 
@@ -22,7 +22,7 @@ Same as DTW. We will reuse the features computed.
 
 ### Online Processing
 
-Same as DTW except for the alignment section. However, since NOA doesn't support subsequence operations, we need to shift the reference features so that the starting point of the reference features correspond to start of the scenario. We then compute alignment path as normal. We can do this because NOA is an online algorithm and it terminates when we reach the end of the query.
+Same as DTW except for the alignment section. However, since SOA doesn't support subsequence operations, we need to shift the reference features so that the starting point of the reference features correspond to start of the scenario. We then compute alignment path as normal. We can do this because SOA is an online algorithm and it terminates when we reach the end of the query.
 
 ## OLTW-GLOBAL
 
@@ -32,7 +32,7 @@ Same as DTW. We will reuse the features computed.
 
 ### Online Processing
 
-Everything is the same as NOA.
+Everything is the same as SOA.
 
 ## OLTW
 

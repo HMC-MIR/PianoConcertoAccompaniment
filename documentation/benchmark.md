@@ -29,7 +29,7 @@ The benchmark depends on the following directories being set up before running:
     * `eval.measures`: Indicates which measures will be evaluated (only sections where both orchestra and piano are active).
 * `audio/`: Contains the audio recordings (P, O, PO). See `01_DataPrep.ipynb` for download and setup instructions.
 * `configs/`: Contains JSON configuration files for system parameters.
-    * `default_systems.json`: Default configurations for all alignment systems (DTW, NOA, NOA_MONOTONIC, OLTW, OLTW_GLOBAL).
+    * `default_systems.json`: Default configurations for all alignment systems (DTW, SOA, SOA_MONOTONIC, OLTW, OLTW_GLOBAL).
     * `oltw_global_examples.json`: Example OLTW_GLOBAL configurations with different parameter settings (A–F). See `configs/README.md` for usage details.
     * The coding agent may modify these configs as needed.
 
@@ -113,8 +113,8 @@ The key source files for scenario generation are:
 
 * We have 5 systems of interest:
     * **DTW**: Standard dynamic time warping using librosa. The code is contained in `System_NaivePairwiseDTW.ipynb`. We have been calling it "naive pairwise DTW," but in our benchmark script we wish to finally rename it to DTW. This is actually an offline alignment system, but we want to establish a baseline with it.
-    * **NOA**: Our novel algorithm called Naive Online Alignment. The code is contained in `System_NOA.ipynb`.
-    * **NOA_monotonic**: NOA, but the alignment has to be monotonic. The code is also in `System_NOA.ipynb`, but with the `monotonic` parameter set to `True`.
+    * **SOA**: Our online alignment algorithm.
+    * **SOA_monotonic**: SOA, but the alignment has to be monotonic (`monotonic` set to `True`).
     * **OLTW**: Online time warping using `PerformanceMatcher.jar` found in `match/`. The code to run it is contained in `System_OLTW.ipynb`.
     * **OLTW_GLOBAL**: Our custom implementation of OLTW. You can find the implementation in `OnlineAlignment/core/alignment/offline/oltw.py`. We haven't implemented this in a notebook yet, but you can find sample code for how to run it in the code segment below.
 
@@ -130,7 +130,7 @@ You can find the specifics within the respective notebooks.
 
 During experiment running, make sure to add proper logging information and proper error handling.
 
-Note on feature computation: Most alignment systems (DTW, NOA, NOA_MONOTONIC, OLTW_GLOBAL) use **chroma STFT features** (`chroma_stft` with `norm=2`), which should be precomputed once and stored in `features/chroma_stft_norm2/`. These features can be reused across systems. However, the **OLTW** system uses its own features computed internally by `PerformanceMatcher.jar` and does not use precomputed features.
+Note on feature computation: Most alignment systems (DTW, SOA, SOA_MONOTONIC, OLTW_GLOBAL) use **chroma STFT features** (`chroma_stft` with `norm=2`), which should be precomputed once and stored in `features/chroma_stft_norm2/`. These features can be reused across systems. However, the **OLTW** system uses its own features computed internally by `PerformanceMatcher.jar` and does not use precomputed features.
 
 System-specific parameters are defined in JSON configuration files stored in `configs/`. The default configurations are in `configs/default_systems.json`. For OLTW_GLOBAL, additional parameter settings (A–F) are available in `configs/oltw_global_examples.json`. See `configs/README.md` for full details.
 
@@ -147,7 +147,7 @@ from tqdm import tqdm
 import vamp
 import pandas as pd
 
-from noa import alignNOA,alignNOA_no_norm, compute_cosine_distance, compute_euclidean_distance
+from soa import alignSOA,alignSOA_no_norm, compute_cosine_distance, compute_euclidean_distance
 from utils.oltw import online_processing
 from OnlineAlignment.core.alignment import run_offline_oltw
 
@@ -205,7 +205,7 @@ def parse_match_outfile(infile):
 class ExperimentRunner:
     def __init__(self, exp_type, kwargs, logger=None):
         """
-        exp_type: experiment to run. Currently accepts DTW, NOA, or MATCH
+        exp_type: experiment to run. Currently accepts DTW, SOA, or MATCH
         kwargs: arguments needed to pass in for the experiment
         logger: optional logger instance
         """
@@ -233,8 +233,8 @@ class ExperimentRunner:
         # run experiment
         if self.exp_type == "DTW":
             self.run_dtw(scenarios_dir, out_path)
-        elif self.exp_type == "NOA" or self.exp_type == "NOA_MONOTONIC":
-            self.run_noa(scenarios_dir, out_path)
+        elif self.exp_type == "SOA" or self.exp_type == "SOA_MONOTONIC":
+            self.run_soa(scenarios_dir, out_path)
         elif self.exp_type == "MATCH":
             self.run_match(scenarios_dir, out_path)
         elif self.exp_type == "OLTW":
@@ -304,9 +304,9 @@ class ExperimentRunner:
         np.save(os.path.join(out_path, "hyp.npy"), wp_sec)
         
         
-    def run_noa(self, scenarios_dir, out_path, monotonic = False):
+    def run_soa(self, scenarios_dir, out_path, monotonic = False):
         """
-        Runs NOA experiment for the given scenario and stores results to output path.
+        Runs SOA experiment for the given scenario and stores results to output path.
         """
         # generate out_path
         os.makedirs(out_path, exist_ok=True)
@@ -322,13 +322,13 @@ class ExperimentRunner:
         else:
             raise ValueError(f"Invalid distance metric: {self.kwargs['distance_metric']}")
         
-        # run NOA
+        # run SOA
         norm = self.kwargs['norm']
         monotonic = self.kwargs['monotonic']
         if norm:
-            wp = alignNOA(query_feat, reference_feat, cost_metric = cost_metric, monotonic = monotonic) # already in seconds
+            wp = alignSOA(query_feat, reference_feat, cost_metric = cost_metric, monotonic = monotonic) # already in seconds
         else:
-            wp = alignNOA_no_norm(query_feat, reference_feat, cost_metric = cost_metric, monotonic = monotonic) # already in seconds
+            wp = alignSOA_no_norm(query_feat, reference_feat, cost_metric = cost_metric, monotonic = monotonic) # already in seconds
         
         # store result
         np.save(os.path.join(out_path, "hyp.npy"), wp)
@@ -356,7 +356,7 @@ class ExperimentRunner:
         window_steps = self.kwargs['window_steps']
         DTW_weights = self.kwargs['DTW_weights']
 
-        # run NOA
+        # run SOA
         wp = run_offline_oltw(reference_feat, query_feat, c=self.kwargs['c'], DTW_steps=DTW_steps, window_steps=window_steps, DTW_weights=DTW_weights)
         
         # convert to seconds
@@ -686,7 +686,7 @@ def get_default_configs(systems: List[str]) -> Dict[str, Dict[str, Any]]:
                 "hop_length": constants.DEFAULT_HOP_LENGTH,
                 "distance_metric": "cosine"
             }
-        elif system in ['NOA', 'NOA_MONOTONIC']:
+        elif system in ['SOA', 'SOA_MONOTONIC']:
             configs[system] = {
                 "steps": constants.DEFAULT_DTW_STEPS.tolist(),
                 "weights": constants.DEFAULT_DTW_WEIGHTS.tolist(),
@@ -695,7 +695,7 @@ def get_default_configs(systems: List[str]) -> Dict[str, Dict[str, Any]]:
                 "hop_length": constants.DEFAULT_HOP_LENGTH,
                 "norm": True,
                 "distance_metric": "cosine",
-                "monotonic": system == 'NOA_MONOTONIC'
+                "monotonic": system == 'SOA_MONOTONIC'
             }
         elif system == 'MATCH':
             configs[system] = {
@@ -916,14 +916,14 @@ def main():
         epilog="""
 Examples:
   # Run full pipeline with default settings
-  python benchmark.py run --benchmark train_small --systems DTW NOA
+  python benchmark.py run --benchmark train_small --systems DTW SOA
   
   # Run full pipeline with custom config
   python benchmark.py run --benchmark train_small --config configs/my_config.json
   
   # Run individual steps
   python benchmark.py prepare --benchmark train_small
-  python benchmark.py features --benchmark train_small --systems DTW NOA
+  python benchmark.py features --benchmark train_small --systems DTW SOA
   python benchmark.py experiment --benchmark train_small --systems OLTW_GLOBAL --config configs/oltw_config.json
   python benchmark.py evaluate --benchmark train_small
         """
@@ -950,7 +950,7 @@ Examples:
                                    choices=['train_small', 'train', 'test'],
                                    help='Benchmark to run experiments on')
     experiment_parser.add_argument('--systems', nargs='+', required=True,
-                                   help='Systems to run (DTW, NOA, NOA_MONOTONIC, MATCH, OLTW, OLTW_GLOBAL, or custom)')
+                                   help='Systems to run (DTW, SOA, SOA_MONOTONIC, MATCH, OLTW, OLTW_GLOBAL, or custom)')
     experiment_parser.add_argument('--config', type=str,
                                    help='JSON configuration file for system parameters')
     
@@ -966,7 +966,7 @@ Examples:
                             choices=['train_small', 'train', 'test'],
                             help='Benchmark to run')
     run_parser.add_argument('--systems', nargs='+', required=True,
-                            help='Systems to run (DTW, NOA, NOA_MONOTONIC, MATCH, OLTW, OLTW_GLOBAL, or custom)')
+                            help='Systems to run (DTW, SOA, SOA_MONOTONIC, MATCH, OLTW, OLTW_GLOBAL, or custom)')
     run_parser.add_argument('--config', type=str,
                             help='JSON configuration file for system parameters')
     

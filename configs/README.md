@@ -7,8 +7,8 @@ This directory contains JSON configuration files for the benchmark pipeline.
 ### `default_systems.json`
 Default configurations for all supported systems:
 - **DTW**: Dynamic Time Warping
-- **NOA**: Normalized Online Alignment
-- **NOA_MONOTONIC**: Normalized Online Alignment with monotonic constraint
+- **SOA**: Normalized Online Alignment
+- **SOA_MONOTONIC**: Normalized Online Alignment with monotonic constraint
 - **MATCH**: MATCH algorithm (requires Java)
 - **OLTW**: Online Time Warping (using Java implementation)
 - **OLTW_GLOBAL**: Global OLTW (custom Python implementation)
@@ -22,7 +22,7 @@ Example OLTW_GLOBAL configurations with different parameter settings (A-F) as de
 If no config file is specified, the script will use default configurations:
 
 ```bash
-python benchmark.py run --benchmark train_small --systems DTW NOA
+python benchmark.py run --benchmark train_small --systems DTW SOA
 ```
 
 ### Using Pre-defined Configurations
@@ -75,7 +75,7 @@ python benchmark.py experiment --benchmark train_small \
 - `hop_length`: Hop length for feature extraction (default: 512 samples)
 - `distance_metric`: Distance metric ("cosine" or "euclidean")
 
-### DTW/NOA Parameters
+### DTW/SOA Parameters
 - `steps`: DTW step pattern as 2D array [[x1,y1], [x2,y2], ...]
 - `weights`: Step weights
 

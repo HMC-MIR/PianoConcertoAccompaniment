@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 
 from utils.systems import online_processing_oltw, online_processing_matchmaker
 from hmc_mir.align import dtw
-from online_alignment import run_offline_noa, run_offline_oltw
-from online_alignment.constants import DEFAULT_DTW_STEPS, DEFAULT_DTW_WEIGHTS, OLTW_STEPS, OLTW_WEIGHTS, NOA_STEPS, NOA_WEIGHTS
+from online_alignment import run_offline_soa, run_offline_oltw
+from online_alignment.constants import DEFAULT_DTW_STEPS, DEFAULT_DTW_WEIGHTS, OLTW_STEPS, OLTW_WEIGHTS, SOA_STEPS, SOA_WEIGHTS
 
 DEFAULT_SR = 22050
 DEFAULT_HOP_LENGTH = 512
@@ -106,30 +106,30 @@ def run_dtw(scenario_path, out_dir, p_ref_cache_dir, hop_length = DEFAULT_HOP_LE
     np.save(f'{out_dir}/hyp.npy', wp_AB*hop_sec)
     logger.info("DTW | saved hyp -> %s/hyp.npy", out_dir)
 
-def run_noa(scenario_path, out_dir, p_ref_cache_dir, ref_start_time, hop_length = DEFAULT_HOP_LENGTH, sr = DEFAULT_SR, steps=NOA_STEPS, weights=NOA_WEIGHTS):
+def run_soa(scenario_path, out_dir, p_ref_cache_dir, ref_start_time, hop_length = DEFAULT_HOP_LENGTH, sr = DEFAULT_SR, steps=SOA_STEPS, weights=SOA_WEIGHTS):
     '''
-    Carries out the 'online' processing for a simple offline subseq NOA system.
+    Carries out the 'online' processing for a simple offline subseq SOA system.
     Inputs:
     scenario_path -- str, path to a single scenario file
     out_dir -- str, directory to where the .hyp will be saved
     p_ref_cache_dir -- str, path to where the features are stored
     ref_start_time -- float, start time of the reference in seconds
     '''
-    logger.info("NOA | scenario=%s  out=%s  ref_start=%.3fs", scenario_path, out_dir, ref_start_time)
+    logger.info("SOA | scenario=%s  out=%s  ref_start=%.3fs", scenario_path, out_dir, ref_start_time)
     system_utils.verify_scenario_dir(scenario_path)
     verify_cache_dir(p_ref_cache_dir)
     assert not os.path.exists(out_dir), f'Output directory {out_dir} already exists.'
     os.makedirs(out_dir)
     
-    logger.debug("NOA | loading features")
+    logger.debug("SOA | loading features")
     F_pquery, F_pref = load_features(scenario_path, p_ref_cache_dir)
     
     # chop reference features
     hop_sec = hop_length / sr
     F_pref = F_pref[:, int(ref_start_time / hop_sec):]
-    logger.debug("NOA | chopped F_pref to shape %s", F_pref.shape)
+    logger.debug("SOA | chopped F_pref to shape %s", F_pref.shape)
     
-    wp = run_offline_noa(F_pref, F_pquery, steps, weights)
+    wp = run_offline_soa(F_pref, F_pquery, steps, weights)
     
     # convert to seconds
     wp_sec = wp * hop_sec
@@ -138,32 +138,32 @@ def run_noa(scenario_path, out_dir, p_ref_cache_dir, ref_start_time, hop_length 
     wp_sec[1, :] += ref_start_time
     
     np.save(f'{out_dir}/hyp.npy', wp_sec)
-    logger.info("NOA | saved hyp -> %s/hyp.npy", out_dir)
+    logger.info("SOA | saved hyp -> %s/hyp.npy", out_dir)
     
-def run_noa_monotonic(scenario_path, out_dir, p_ref_cache_dir, ref_start_time, hop_length = DEFAULT_HOP_LENGTH, sr = DEFAULT_SR, steps=NOA_STEPS, weights=NOA_WEIGHTS):
+def run_soa_monotonic(scenario_path, out_dir, p_ref_cache_dir, ref_start_time, hop_length = DEFAULT_HOP_LENGTH, sr = DEFAULT_SR, steps=SOA_STEPS, weights=SOA_WEIGHTS):
     '''
-    Carries out the 'online' processing for a simple offline subseq NOA system with monotonic constraint.
+    Carries out the 'online' processing for a simple offline subseq SOA system with monotonic constraint.
     Inputs:
     scenario_path -- str, path to a single scenario file
     out_dir -- str, directory to where the .hyp will be saved
     p_ref_cache_dir -- str, path to where the features are stored
     ref_start_time -- float, start time of the reference in seconds
     '''
-    logger.info("NOA-MONO | scenario=%s  out=%s  ref_start=%.3fs", scenario_path, out_dir, ref_start_time)
+    logger.info("SOA-MONO | scenario=%s  out=%s  ref_start=%.3fs", scenario_path, out_dir, ref_start_time)
     system_utils.verify_scenario_dir(scenario_path)
     verify_cache_dir(p_ref_cache_dir)
     assert not os.path.exists(out_dir), f'Output directory {out_dir} already exists.'
     os.makedirs(out_dir)
     
-    logger.debug("NOA-MONO | loading features")
+    logger.debug("SOA-MONO | loading features")
     F_pquery, F_pref = load_features(scenario_path, p_ref_cache_dir)
     
     # chop reference features
     hop_sec = hop_length / sr
     F_pref = F_pref[:, int(ref_start_time / hop_sec):]
-    logger.debug("NOA-MONO | chopped F_pref to shape %s", F_pref.shape)
+    logger.debug("SOA-MONO | chopped F_pref to shape %s", F_pref.shape)
     
-    wp = run_offline_noa(F_pref, F_pquery, steps, weights, monotonic=True)
+    wp = run_offline_soa(F_pref, F_pquery, steps, weights, monotonic=True)
     
     # convert to seconds
     wp_sec = wp * hop_sec
@@ -172,7 +172,7 @@ def run_noa_monotonic(scenario_path, out_dir, p_ref_cache_dir, ref_start_time, h
     wp_sec[1, :] += ref_start_time
     
     np.save(f'{out_dir}/hyp.npy', wp_sec)
-    logger.info("NOA-MONO | saved hyp -> %s/hyp.npy", out_dir)
+    logger.info("SOA-MONO | saved hyp -> %s/hyp.npy", out_dir)
     
 def run_oltw_global(scenario_path, out_dir, p_ref_cache_dir, ref_start_time, hop_length = DEFAULT_HOP_LENGTH, sr = DEFAULT_SR, dtw_steps=OLTW_STEPS, dtw_weights=OLTW_WEIGHTS, window_steps=OLTW_STEPS):
     '''
@@ -260,10 +260,10 @@ def process_scenario(task):
     try:
         if system == "DTW":
             run_dtw(scenario_dir, out_dir, p_ref_cache_dir, hop_length=hop_length, sr=sr)
-        elif system == "NOA":
-            run_noa(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, hop_length=hop_length, sr=sr)
-        elif system == "NOA-MONO":
-            run_noa_monotonic(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, hop_length=hop_length, sr=sr)
+        elif system == "SOA":
+            run_soa(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, hop_length=hop_length, sr=sr)
+        elif system == "SOA-MONO":
+            run_soa_monotonic(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, hop_length=hop_length, sr=sr)
         elif system == "OLTW":
             run_oltw(scenario_dir, out_dir, hop_length)
         elif system == "OLTW-GLOBAL":
@@ -288,7 +288,7 @@ if __name__ == "__main__":
 
     VALID_BENCHMARKS = ["train"]
     VALID_MODES = ["constant", "continuous", "random"]
-    VALID_SYSTEMS = ["DTW", "NOA", "NOA-MONO", "OLTW", "OLTW-GLOBAL", "MM-DIXON", "MM-DIXON-RAW", "MM-ARZT"]
+    VALID_SYSTEMS = ["DTW", "SOA", "SOA-MONO", "OLTW", "OLTW-GLOBAL", "MM-DIXON", "MM-DIXON-RAW", "MM-ARZT"]
 
     parser = argparse.ArgumentParser(
         description="Run online alignment processing for a given benchmark, mode, and system.",
