@@ -40,9 +40,6 @@ latency is measured separately; see `documentation/timing_study.md`.
 | `04_Analysis.ipynb` | Alignment path inspection. |
 | `documentation/` | Benchmark stages, per-system notes, and the timing study. |
 
-Alignment results, features, audio and scenarios are gitignored; the notebooks and
-`documentation/` hold the numbers that are kept.
-
 ## Environment
 
 `environment.yml` covers the benchmark environment. The MatchMaker baselines need a
