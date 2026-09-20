@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 import os
 import librosa as lb
 from numba import jit, njit, prange
@@ -235,8 +236,45 @@ def run_oltw(scenario_path, out_dir, hop_length):
     logger.info("OLTW | scenario=%s  out=%s", scenario_path, out_dir)
     online_processing_oltw(scenario_path, out_dir, hop_length, jar_path=None)
     logger.info("OLTW | saved hyp -> %s/hyp.npy", out_dir)
-    
-    
+
+
+def process_scenario(task):
+    '''
+    Runs one system on one scenario.
+
+    Module level so that it can be pickled and dispatched to a worker process. Each
+    scenario reads shared read-only feature files and writes only its own hyp.npy,
+    so scenarios are independent of one another.
+
+    Inputs:
+    task -- tuple of (system, scenario_id, scenario_dir, out_dir, p_ref_cache_dir,
+            ref_start_time, hop_length, sr)
+
+    Returns a tuple of (scenario_id, error string or None).
+    '''
+    (system, scenario_id, scenario_dir, out_dir, p_ref_cache_dir,
+     ref_start_time, hop_length, sr) = task
+
+    try:
+        if system == "DTW":
+            run_dtw(scenario_dir, out_dir, p_ref_cache_dir, hop_length=hop_length, sr=sr)
+        elif system == "NOA":
+            run_noa(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, hop_length=hop_length, sr=sr)
+        elif system == "NOA-MONO":
+            run_noa_monotonic(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, hop_length=hop_length, sr=sr)
+        elif system == "OLTW":
+            run_oltw(scenario_dir, out_dir, hop_length)
+        elif system == "OLTW-GLOBAL":
+            run_oltw_global(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, hop_length=hop_length, sr=sr)
+        elif system == "MM-DIXON":
+            run_matchmaker(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, "dixon", hop_length=hop_length, sr=sr)
+        elif system == "MM-ARZT":
+            run_matchmaker(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, "arzt", hop_length=hop_length, sr=sr, step_size=3)
+        return scenario_id, None
+    except Exception as e:
+        return scenario_id, repr(e)
+
+
 if __name__ == "__main__":
     import argparse
     from tqdm import tqdm
@@ -277,6 +315,14 @@ if __name__ == "__main__":
         help="Run every combination of benchmark, mode, and system (overrides --benchmark/--modes/--systems).",
     )
     parser.add_argument(
+        "--jobs",
+        type=int,
+        default=1,
+        help="Number of scenarios to run in parallel (1 runs serially). Export "
+             "OMP_NUM_THREADS=1 and friends before starting python when using >1, "
+             "so that workers do not each spin up a full thread pool.",
+    )
+    parser.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         default="WARNING",
@@ -306,6 +352,9 @@ if __name__ == "__main__":
 
     hop_length = DEFAULT_HOP_LENGTH
     sr = DEFAULT_SR
+    jobs = max(1, args.jobs)
+    if jobs > 1:
+        logger.info("Running with %d worker processes", jobs)
 
     total = len(benchmarks) * len(modes) * len(systems)
     logger.info(
@@ -333,7 +382,8 @@ if __name__ == "__main__":
                 logger.info("Found %d scenario(s) in %s", n_scenarios, scenarios_root)
 
                 skipped = 0
-                for i in tqdm(range(n_scenarios), desc=f"{benchmark}/{mode}/{system}"):
+                tasks = []
+                for i in range(n_scenarios):
                     scenario_id  = f"s{i+1}"
                     scenario_dir = f"{scenarios_root}/{scenario_id}"
                     out_dir      = f"{exp_root}/{scenario_id}"
@@ -353,24 +403,24 @@ if __name__ == "__main__":
                         "Processing %s  ref_feat=%s  ref_start=%.3fs",
                         scenario_id, p_ref_cache_dir, ref_start_time,
                     )
+                    tasks.append((system, scenario_id, scenario_dir, out_dir,
+                                  p_ref_cache_dir, ref_start_time, hop_length, sr))
 
-                    try:
-                        if system == "DTW":
-                            run_dtw(scenario_dir, out_dir, p_ref_cache_dir, hop_length=hop_length, sr=sr)
-                        elif system == "NOA":
-                            run_noa(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, hop_length=hop_length, sr=sr)
-                        elif system == "NOA-MONO":
-                            run_noa_monotonic(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, hop_length=hop_length, sr=sr)
-                        elif system == "OLTW":
-                            run_oltw(scenario_dir, out_dir, hop_length)
-                        elif system == "OLTW-GLOBAL":
-                            run_oltw_global(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, hop_length=hop_length, sr=sr)
-                        elif system == "MM-DIXON":
-                            run_matchmaker(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, "dixon", hop_length=hop_length, sr=sr)
-                        elif system == "MM-ARZT":
-                            run_matchmaker(scenario_dir, out_dir, p_ref_cache_dir, ref_start_time, "arzt", hop_length=hop_length, sr=sr, step_size=3)
-                    except Exception:
-                        logger.exception("Error processing %s — skipping", scenario_id)
+                desc = f"{benchmark}/{mode}/{system}"
+                if jobs <= 1:
+                    results = (process_scenario(t) for t in tasks)
+                    for scenario_id, error in tqdm(results, total=len(tasks), desc=desc):
+                        if error is not None:
+                            logger.error("Error processing %s — skipping: %s", scenario_id, error)
+                else:
+                    # chunksize=1 because scenario durations vary widely across movements.
+                    with multiprocessing.Pool(processes=jobs) as pool:
+                        for scenario_id, error in tqdm(
+                            pool.imap_unordered(process_scenario, tasks, chunksize=1),
+                            total=len(tasks), desc=desc,
+                        ):
+                            if error is not None:
+                                logger.error("Error processing %s — skipping: %s", scenario_id, error)
 
                 logger.info(
                     "Finished %s/%s/%s: %d processed, %d skipped",
