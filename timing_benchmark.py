@@ -5,17 +5,18 @@ SOA has no local search window, so its per-frame cost is O(N) in the reference l
 These measurements show what that costs against the 23.2 ms frame period, for
 references far longer than any concerto movement.
 
-Why this file exists rather than timing OfflineSOA directly: OfflineSOA pre-allocates
-D and B at (2N, N), which is ~192 GB at a 60-minute reference, so it cannot be run at
-the lengths of interest. The streaming version here keeps only the three most recent
-rows of D, and validate_against_offline() checks it produces the same path as
-OfflineSOA at a size where OfflineSOA can actually run.
+What is timed is the online_alignment package's SOA (the code that produced the
+accuracy results): its cost row and its vectorized DP update, called exactly as
+SOA.feed() calls them. validate_against_feed() checks that the timed loop reproduces
+SOA.feed()'s path before any timing is reported.
 
-Normalization matches the shipped code (soa.py:71): the path length divisor is
-(t+1)+(j+1), i.e. every path is assumed to start at reference position 0.
+With a fixed start and SOA's steps (1,1), (1,2), (2,1), query frame t can only reach
+reference frames t/2 to 2t. Early frames therefore leave most of the row unreachable,
+which a performance in progress does not. Timing starts at t = N/2 by default, where the
+reachable part of the row is largest (three quarters of the reference).
 
 Run:
-    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMBA_NUM_THREADS=1 \
         taskset -c 0 python timing_benchmark.py
 """
 
@@ -28,7 +29,9 @@ import subprocess
 import time
 
 import numpy as np
-from numba import njit
+
+import online_alignment as oa
+from online_alignment.alignment.algs.soa import soa_scores_fixed, soa_update_fixed
 
 DEFAULT_SR = 22050
 DEFAULT_HOP_LENGTH = 512
@@ -45,138 +48,54 @@ QUERY_SCENARIO = 'scenarios/train/constant/s1/pquery_stft.npy'
 
 
 # ---------------------------------------------------------------------------
-# Streaming SOA update
+# The package's SOA update, step by step
 # ---------------------------------------------------------------------------
 
 
-@njit(cache=True)
-def soa_update(t, C, D, cur, prev1, prev2, N):
-    """Updates one query frame of SOA, keeping only the three most recent rows of D.
+class TimedSOA:
+    """The package's fixed-start SOA update, split into its two timed halves.
 
-    Mirrors soa_row_update in online_alignment's SOA (with normalize=True), including
-    its treatment of unreachable cells: when no incoming step is finite the cell is
-    left at infinity and cannot win the position argmin.
-
-    The argmin over j is fused into the same pass, since it is one comparison per
-    column and needs no second traversal.
-
-    Rows are addressed by rotating index rather than by shifting the buffer, so a
-    frame costs no allocation and no row copy. Shifting instead would add two
-    N-element memcpys per frame for no algorithmic reason.
-
-    Inputs
-    t: current query frame index (>= 1)
-    C: local cost row for frame t, shape (N,)
-    D: rolling accumulated cost buffer, shape (3, N)
-    cur, prev1, prev2: row indices into D for frames t, t-1 and t-2
-    N: number of reference frames
-
-    Returns best_j, the estimated reference position for frame t.
+    Uses the cost function and buffers of an online_alignment SOA object and calls
+    the same kernels, in the same order, as SOA.feed(). Only the input check and the
+    path bookkeeping of feed() are left out (about 0.04 ms per frame), and so is the
+    stop at the end of the reference, so that timing can continue past it.
     """
-    Dn = D[cur]
-    P1 = D[prev1]
-    P2 = D[prev2]
 
-    best_norm = np.inf
-    best_j = 0
+    def __init__(self, ref):
+        self.soa = oa.SOA(ref)  # fixed start, default steps and weights
+        self.t = 0
 
-    for j in range(N):
-        best_cost = np.inf
+    def cost_row(self, q):
+        return self.soa._costs(q)
 
-        # (1,1) weight 1
-        if j >= 1:
-            c = P1[j - 1] + C[j]
-            if c < best_cost:
-                best_cost = c
-        # (1,2) weight 1
-        if j >= 2:
-            c = P1[j - 2] + C[j]
-            if c < best_cost:
-                best_cost = c
-        # (2,1) weight 2
-        if j >= 1:
-            c = P2[j - 1] + 2.0 * C[j]
-            if c < best_cost:
-                best_cost = c
-
-        Dn[j] = best_cost
-        if best_cost < np.inf:
-            norm = best_cost / (t + 1 + j + 1)
-            if norm < best_norm:
-                best_norm = norm
-                best_j = j
-
-    return best_j
+    def dp_update(self, costs):
+        """Computes the next row and returns the estimated reference position."""
+        self.t += 1
+        t, soa = self.t, self.soa
+        cur = t % 3
+        soa_update_fixed(costs, soa._D, cur, (t - 1) % 3, (t - 2) % 3, *soa._w)
+        soa_scores_fixed(t, soa._D[cur], soa._scores)
+        return int(np.argmin(soa._scores))
 
 
-def soa_stream(ref, query, monotonic=False):
-    """Runs streaming SOA over a whole query, returning the path as frame indices.
+def validate_against_feed(n_ref=6000, n_query=600):
+    """Checks the timed update loop reproduces SOA.feed()'s path exactly."""
+    ref = np.ascontiguousarray(
+        np.load(f'features/{PIECE_IDS[0]}/chroma_stft_norm2/{PIECE_IDS[0]}.features.npy')[:, :n_ref])
+    query = np.ascontiguousarray(np.load(QUERY_SCENARIO)[:, :n_query])
 
-    Both feature matrices are assumed L2-normalized by column, which is how the
-    benchmark's chroma_stft_norm2 features are stored.
-
-    Inputs
-    ref: reference features, shape (12, N)
-    query: query features, shape (12, T)
-
-    Returns a 2xM integer array of (query frame, reference frame).
-    """
-    N = ref.shape[1]
-    refT = np.ascontiguousarray(ref.T)
-    D = np.full((3, N), np.inf, dtype=np.float32)
-    C = np.empty(N, dtype=np.float32)
-
-    # Row r holds frame (r - 1) at the start: row 1 is frame 0, the only initialized
-    # row, and row 0 stands in for the nonexistent frame -1.
-    D[1, 0] = 0.0
+    expected = oa.run_offline_soa(ref, query)
+    timed = TimedSOA(ref)
     path = [[0, 0]]
-
     for t in range(1, query.shape[1]):
-        if path[-1][1] >= N - 1:
+        if path[-1][1] >= ref.shape[1] - 1:
             break
-        np.dot(refT, query[:, t], out=C)
-        np.subtract(np.float32(1.0), C, out=C)
-        cur, prev1, prev2 = (t + 1) % 3, t % 3, (t - 1) % 3
-        best_j = soa_update(t, C, D, cur, prev1, prev2, N)
-        if monotonic:
-            best_j = max(best_j, path[-1][1])
-        path.append([t, best_j])
+        path.append([t, timed.dp_update(timed.cost_row(query[:, t]))])
+    actual = np.array(path, dtype=np.int64).T
 
-    return np.array(path, dtype=np.int32).T
-
-
-# ---------------------------------------------------------------------------
-# Validation
-# ---------------------------------------------------------------------------
-
-
-def validate_against_offline(n_ref=6000, n_query=600):
-    """Checks the streaming update reproduces OfflineSOA on a size OfflineSOA can run.
-
-    n_ref and n_query are kept small so the check runs quickly.
-    """
-    from online_alignment import run_offline_soa
-
-    ref = np.load(f'features/{PIECE_IDS[0]}/chroma_stft_norm2/{PIECE_IDS[0]}.features.npy')
-    query = np.load(QUERY_SCENARIO)
-    ref = np.ascontiguousarray(ref[:, :n_ref])
-    query = np.ascontiguousarray(query[:, :n_query])
-
-    expected = run_offline_soa(ref, query)
-    actual = soa_stream(ref, query)
-
-    if expected.shape != actual.shape:
-        return False, f'shape {actual.shape} != offline {expected.shape}'
-    n_diff = int((expected != actual).sum())
-    if n_diff:
-        worst = int(np.abs(expected[1] - actual[1]).max())
-        return False, f'{n_diff} differing entries, max reference-frame gap {worst}'
+    if expected.shape != actual.shape or not np.array_equal(expected, actual):
+        return False, f'path differs from SOA.feed: {actual.shape} vs {expected.shape}'
     return True, f'exact match on {expected.shape[1]} path points (N={n_ref}, T={n_query})'
-
-
-# ---------------------------------------------------------------------------
-# Timing
-# ---------------------------------------------------------------------------
 
 
 def build_reference(n_frames):
@@ -204,35 +123,31 @@ def summarize(samples_s):
     }
 
 
-def time_reference_length(n_frames, query, n_updates, n_warmup):
-    """Times the cost row and the DP update separately at one reference length."""
-    ref = build_reference(n_frames)
-    refT = np.ascontiguousarray(ref.T)  # (N, 12), the layout a streaming system would hold
-    N = n_frames
+def time_reference_length(n_frames, query, n_updates, n_warmup=None):
+    """Times the cost row and the DP update separately at one reference length.
 
-    D = np.full((3, N), np.inf, dtype=np.float32)
-    D[1, 0] = 0.0
-    C = np.empty(N, dtype=np.float32)
+    n_warmup defaults to N/2 untimed updates, where the reachable part of the row is
+    largest.
+    """
+    if n_warmup is None:
+        n_warmup = n_frames // 2
+    timed = TimedSOA(build_reference(n_frames))
+    scores = timed.soa._scores
 
     cost_s, dp_s, total_s, argmin_s = [], [], [], []
-
     for i in range(n_warmup + n_updates):
-        q = np.ascontiguousarray(query[:, i % query.shape[1]])
-        t = i + 1
-        cur, prev1, prev2 = (t + 1) % 3, t % 3, (t - 1) % 3
+        q = np.ascontiguousarray(query[:, (i + 1) % query.shape[1]])
 
         t0 = time.perf_counter()
-        np.dot(refT, q, out=C)
-        np.subtract(np.float32(1.0), C, out=C)
+        costs = timed.cost_row(q)
         t1 = time.perf_counter()
-        soa_update(t, C, D, cur, prev1, prev2, N)
+        timed.dp_update(costs)
         t2 = time.perf_counter()
 
-        # Indicative cost of a standalone argmin pass, for readers who separate it
-        # from the DP update. The shipped design fuses the two, so this time is not
-        # part of the totals below.
+        # Indicative cost of the position argmin alone. It is part of the DP update
+        # above, so this time is not added to the totals.
         t3 = time.perf_counter()
-        np.argmin(D[cur])
+        np.argmin(scores)
         t4 = time.perf_counter()
 
         if i >= n_warmup:
@@ -241,10 +156,13 @@ def time_reference_length(n_frames, query, n_updates, n_warmup):
             total_s.append(t2 - t0)
             argmin_s.append(t4 - t3)
 
-    del ref, refT, D, C
+    reachable = float(np.isfinite(timed.soa._D[timed.t % 3]).mean())
+    del timed
     return {
         'n_frames': n_frames,
         'minutes': n_frames * DEFAULT_HOP_LENGTH / DEFAULT_SR / 60.0,
+        'n_warmup': n_warmup,
+        'reachable_fraction': reachable,
         'cost_row': summarize(cost_s),
         'dp_update': summarize(dp_s),
         'argmin_standalone': summarize(argmin_s),
@@ -313,6 +231,7 @@ def environment():
         'python': platform.python_version(),
         'numpy': np.__version__,
         'numba': numba.__version__,
+        'online_alignment': oa.__version__,
         'dtype': 'float32',
         'thread_env': {k: os.environ.get(k) for k in
                        ('OMP_NUM_THREADS', 'MKL_NUM_THREADS', 'OPENBLAS_NUM_THREADS')},
@@ -360,8 +279,9 @@ def write_report(results, path):
         f"Machine: {env['cpu']}, pinned to core(s) {env['cpu_affinity']}. "
         f"Python {env['python']}, NumPy {env['numpy']}, numba {env['numba']}, {env['dtype']} features.",
         '',
-        'Normalization matches the shipped implementation (path length `(t+1)+(j+1)`), and the',
-        'streaming update is bit-exact against `OfflineSOA` on all four benchmark pieces.',
+        f"Times the online_alignment {results['environment']['online_alignment']} SOA update, "
+        f"checked against `SOA.feed()`, from query frame N/2 on,",
+        'where the reachable part of the row is largest.',
         '',
         '| Reference | N | Cost row (ms) | DP update (ms) | Total median (ms) | p95 | max | ns per ref frame | × under real time |',
         '|---|---|---|---|---|---|---|---|---|',
@@ -388,11 +308,15 @@ def write_report(results, path):
                   f"window {mm['window_size_seconds']:.0f} s "
                   f"(~{int(mm['window_size_seconds'] * DEFAULT_SR / DEFAULT_HOP_LENGTH):,} frames).",
                   '',
-                  '| Follower | Median (ms) | p95 | max |', '|---|---|---|---|']
+                  '| System | Median (ms) | p95 | max |', '|---|---|---|---|']
+        soa_mm = results.get('soa_at_matchmaker_reference')
+        if soa_mm:
+            t = soa_mm['total']
+            lines.append(f"| SOA | {t['median_ms']:.3f} | {t['p95_ms']:.3f} | {t['max_ms']:.3f} |")
         for name in ('dixon', 'arzt'):
             r = mm.get(name, {})
             if 'median_ms' in r:
-                lines.append(f"| {name} | {r['median_ms']:.3f} | {r['p95_ms']:.3f} | {r['max_ms']:.3f} |")
+                lines.append(f"| MatchMaker-{name} | {r['median_ms']:.3f} | {r['p95_ms']:.3f} | {r['max_ms']:.3f} |")
 
     with open(path, 'w') as f:
         f.write('\n'.join(lines) + '\n')
@@ -434,6 +358,15 @@ def write_csv(results, soa_path, baselines_path):
                     'n_timed_updates', 'notes'])
 
         mm = results.get('matchmaker') or {}
+        soa_mm = results.get('soa_at_matchmaker_reference')
+        if soa_mm:
+            t = soa_mm['total']
+            w.writerow([
+                'soa', f"full reference, ref {soa_mm['n_frames']} frames",
+                f"{t['median_ms']:.4f}", f"{t['p95_ms']:.4f}",
+                f"{t['max_ms']:.4f}", f"{t['mean_ms']:.4f}", t['n'],
+                'cost row + DP update, same reference as the MatchMaker rows',
+            ])
         if 'error' not in mm:
             window_frames = int(mm.get('window_size_seconds', 0) * DEFAULT_SR / DEFAULT_HOP_LENGTH)
             for name in ('dixon', 'arzt'):
@@ -465,8 +398,9 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--n-updates', type=int, default=2000,
                         help='Timed updates per reference length.')
-    parser.add_argument('--n-warmup', type=int, default=50,
-                        help='Untimed updates before measurement begins.')
+    parser.add_argument('--n-warmup', type=int, default=None,
+                        help='Untimed updates before measurement begins (default N/2, where '
+                             'the reachable part of the row is largest).')
     parser.add_argument('--minutes', type=int, nargs='+', default=list(REF_MINUTES),
                         help='Reference durations to sweep, in minutes.')
     parser.add_argument('--out', default='eval/timing.json', help='Where to write results.')
@@ -480,26 +414,29 @@ def main():
     print(f"cpu            : {results['environment']['cpu']}")
     print(f"affinity       : {results['environment']['cpu_affinity']}")
     print(f"numpy / numba  : {np.__version__} / {results['environment']['numba']}")
+    print(f"online_alignment: {oa.__version__}")
     print(f"frame period   : {FRAME_PERIOD_MS:.2f} ms\n")
 
     if not args.skip_validation:
-        ok, detail = validate_against_offline()
+        ok, detail = validate_against_feed()
         results['validation'] = {'passed': ok, 'detail': detail}
-        print(f"validation vs OfflineSOA: {'PASS' if ok else 'FAIL'} — {detail}\n")
+        print(f"validation vs SOA.feed: {'PASS' if ok else 'FAIL'} — {detail}\n")
         if not ok:
-            raise SystemExit('Streaming SOA does not match OfflineSOA; timings would be meaningless.')
+            raise SystemExit('The timed update does not match SOA.feed; timings would be meaningless.')
 
     query = np.ascontiguousarray(np.load(QUERY_SCENARIO), dtype=np.float32)
 
     # Compile before the first timed length so JIT does not land inside a measurement.
-    soa_update(1, np.zeros(8, np.float32), np.full((3, 8), np.inf, np.float32), 2, 1, 0, 8)
+    warm = TimedSOA(np.ones((12, 8), np.float32))
+    warm.dp_update(warm.cost_row(np.ones(12, np.float32)))
 
     rows = []
     for minutes in args.minutes:
         n_frames = int(round(minutes * 60 / (DEFAULT_HOP_LENGTH / DEFAULT_SR)))
         r = time_reference_length(n_frames, query, args.n_updates, args.n_warmup)
         rows.append(r)
-        print(f"N={n_frames:>7} ({minutes:>3} min)  "
+        print(f"N={n_frames:>7} ({minutes:>3} min, from frame {r['n_warmup']}, "
+              f"{100 * r['reachable_fraction']:.0f}% reachable)  "
               f"cost {r['cost_row']['median_ms']:6.3f}  "
               f"dp {r['dp_update']['median_ms']:6.3f}  "
               f"total med {r['total']['median_ms']:6.3f}  "
@@ -524,6 +461,12 @@ def main():
                 if isinstance(r, dict) and 'median_ms' in r:
                     print(f"matchmaker {name:<8}: median {r['median_ms']:.3f} ms  "
                           f"p95 {r['p95_ms']:.3f}  max {r['max_ms']:.3f}")
+            # SOA on the same reference length, for a like-for-like comparison
+            soa_mm = time_reference_length(mm['reference_frames'], query, args.n_updates,
+                                           args.n_warmup)
+            results['soa_at_matchmaker_reference'] = soa_mm
+            print(f"soa (same ref) : median {soa_mm['total']['median_ms']:.3f} ms  "
+                  f"p95 {soa_mm['total']['p95_ms']:.3f}  max {soa_mm['total']['max_ms']:.3f}")
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, 'w') as f:
