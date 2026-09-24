@@ -10,21 +10,25 @@ dependencies:
   # notebooks
   - jupyter
   - jupyterlab >=4.0,<5
+  - plotly                  # 04_Analysis.ipynb
 
   # core deps
+  - numpy
+  - numba
+  - scipy
   - pandas >=2.0,<3
+  - matplotlib
   - tqdm
-  - importnb >=2023.1
 
   # audio
   - librosa >=0.10,<0.11
+  - soundfile
   - ffmpeg
 
-  # viz
-  - k3d ==2.15.3
+  # the OLTW baseline runs match/PerformanceMatcher.jar
+  - openjdk >=21
 
   - pip:
       - import-ipynb==0.1.4
       - hmc_mir==0.1.15
       - online-alignment @ git+https://github.com/HMC-MIR/OnlineAlignment@v0.4.1
-      - cython==3.0

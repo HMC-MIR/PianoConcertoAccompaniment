@@ -148,7 +148,7 @@ OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMBA_NUM_THREADS=1 \
     taskset -c 0 python timing_benchmark.py
 ```
 
-Writes four files under `eval/`, which is gitignored, so the tables above are the
+Writes five files under `eval/`, which is gitignored, so the tables above are the
 tracked copy of these numbers. The tables are the median of three runs of this command;
 one run takes about 17 minutes, most of it the fixed-start warm-up of the 120-minute
 reference. `--start flexible` times only the flexible start, in a few minutes.
@@ -165,5 +165,7 @@ numpy < 2 and cannot share a process with the benchmark environment. This is the
 arrangement `matchmaker_worker.py` uses.
 
 Environment for the numbers above: Intel Xeon Silver 4210R at 2.40 GHz, single pinned
-core, Python 3.11.14, NumPy 2.3.5, numba 0.63.1, online_alignment 0.4.1,
-12-dimensional chroma in float32, hop 512 at 22050 Hz.
+core, Python 3.11.14, NumPy 2.3.5 with OpenBLAS 0.3.30, numba 0.63.1, online_alignment
+0.4.1, 12-dimensional chroma in float32, hop 512 at 22050 Hz. The BLAS library matters for
+the cost row: NumPy from conda-forge or pip uses OpenBLAS, while Anaconda's default
+channel uses Intel MKL, which was slower for this operation on this machine.

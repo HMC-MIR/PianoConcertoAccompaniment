@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 import os
 import librosa as lb
-from numba import jit, njit, prange
+from numba import jit, prange
 import numpy as np
 import system_utils
 
@@ -17,32 +17,6 @@ from utils.constants import DEFAULT_DTW_STEPS, DEFAULT_DTW_WEIGHTS
 
 DEFAULT_SR = 22050
 DEFAULT_HOP_LENGTH = 512
-
-@njit(cache=True)
-def compute_cosine_distance(feature_row, reference_features):
-    """Compute cosine distance between normalized feature vectors.
-
-    Assumes both feature_row and reference_features are already normalized (unit vectors).
-    For normalized vectors, cosine distance = 1 - dot_product.
-    """
-    costs = np.empty(reference_features.shape[1], dtype=np.float32)
-
-    for j in range(reference_features.shape[1]):
-        ref_col = reference_features[:, j]
-        dot_product = np.sum(feature_row * ref_col)
-        costs[j] = 1.0 - dot_product
-
-    return costs
-
-def verify_cache_dir(indir):
-    '''
-    Verifies that the specified cache directory has the required files.
-    
-    Inputs
-    indir: The cache directory to verify (features/{piece_id})
-    '''
-    return
-
 
 @jit(nopython=True, parallel=True)
 def cosine_dist(F1, F2):
@@ -91,7 +65,6 @@ def run_dtw(scenario_path, out_dir, p_ref_cache_dir, hop_length = DEFAULT_HOP_LE
     '''
     logger.info("DTW | scenario=%s  out=%s", scenario_path, out_dir)
     system_utils.verify_scenario_dir(scenario_path)
-    # verify_cache_dir(p_ref_cache_dir)
     assert not os.path.exists(out_dir), f'Output directory {out_dir} already exists.'
     os.makedirs(out_dir)
 
@@ -118,7 +91,6 @@ def run_soa(scenario_path, out_dir, p_ref_cache_dir, ref_start_time, hop_length 
     '''
     logger.info("SOA | scenario=%s  out=%s  ref_start=%.3fs", scenario_path, out_dir, ref_start_time)
     system_utils.verify_scenario_dir(scenario_path)
-    verify_cache_dir(p_ref_cache_dir)
     assert not os.path.exists(out_dir), f'Output directory {out_dir} already exists.'
     os.makedirs(out_dir)
     
@@ -152,7 +124,6 @@ def run_soa_monotonic(scenario_path, out_dir, p_ref_cache_dir, ref_start_time, h
     '''
     logger.info("SOA-MONO | scenario=%s  out=%s  ref_start=%.3fs", scenario_path, out_dir, ref_start_time)
     system_utils.verify_scenario_dir(scenario_path)
-    verify_cache_dir(p_ref_cache_dir)
     assert not os.path.exists(out_dir), f'Output directory {out_dir} already exists.'
     os.makedirs(out_dir)
     
@@ -191,7 +162,6 @@ def run_oltw_global(scenario_path, out_dir, p_ref_cache_dir, ref_start_time, hop
     '''
     logger.info("OLTW-GLOBAL | scenario=%s  out=%s  ref_start=%.3fs", scenario_path, out_dir, ref_start_time)
     system_utils.verify_scenario_dir(scenario_path)
-    verify_cache_dir(p_ref_cache_dir)
     assert not os.path.exists(out_dir), f'Output directory {out_dir} already exists.'
     os.makedirs(out_dir)
     
@@ -227,7 +197,6 @@ def run_matchmaker(scenario_path, out_dir, p_ref_cache_dir, ref_start_time, meth
     '''
     logger.info("MATCHMAKER-%s | scenario=%s  out=%s  ref_start=%.3fs", method.upper(), scenario_path, out_dir, ref_start_time)
     system_utils.verify_scenario_dir(scenario_path)
-    verify_cache_dir(p_ref_cache_dir)
 
     online_processing_matchmaker(scenario_path, out_dir, p_ref_cache_dir, ref_start_time, method,
                                  hop_length=hop_length, sr=sr, window_size=window_size,

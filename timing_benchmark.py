@@ -462,9 +462,9 @@ def main():
     parser.add_argument('--start', choices=('fixed', 'flexible', 'both'), default='both',
                         help='Which SOA start modes to time.')
     parser.add_argument('--out', default='eval/timing.json', help='Where to write results.')
-    parser.add_argument('--matchmaker-python',
-                        default=os.path.expanduser('~/ttmp/anaconda3/envs/matchmaker/bin/python'),
-                        help='Interpreter of the matchmaker env; pass "" to skip.')
+    parser.add_argument('--matchmaker-python', default=None,
+                        help='Interpreter of the matchmaker env (default: $MATCHMAKER_PYTHON, then '
+                             'a sibling env named "matchmaker"); pass "" to skip MatchMaker.')
     parser.add_argument('--skip-validation', action='store_true')
     args = parser.parse_args()
     modes = ('fixed', 'flexible') if args.start == 'both' else (args.start,)
@@ -508,8 +508,16 @@ def main():
         print(f"chroma_stft    : {feat['per_frame_ms_median']:.4f} ms/frame "
               f"(batch proxy, {feat['n_frames']} frames)")
 
-    if args.matchmaker_python:
-        mm = time_matchmaker(args.matchmaker_python, args.n_updates, args.n_warmup)
+    matchmaker_python = args.matchmaker_python
+    if matchmaker_python is None:
+        from utils.systems.matchmaker_baseline import verify_matchmaker_installation
+        try:
+            matchmaker_python = verify_matchmaker_installation()
+        except RuntimeError as e:
+            print(f"matchmaker     : skipped ({e})")
+            matchmaker_python = ''
+    if matchmaker_python:
+        mm = time_matchmaker(matchmaker_python, args.n_updates, args.n_warmup)
         results['matchmaker'] = mm
         if 'error' in mm:
             print(f"matchmaker     : FAILED — {mm['error'][:300]}")

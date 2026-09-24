@@ -117,31 +117,21 @@ def calcAlignErrors_batch(exp_dir, scenarios_dir, out_dir, hypFileExt = '', piec
         systems at different iterations)
     piece_filter: if specified, only evaluate scenarios from pieces whose IDs contain this string
                   (e.g., 'bach5' to filter for Bach pieces, 'beeth' for Beethoven, 'mozart' for Mozart)
-    piece_filter: if specified, only evaluate scenarios from pieces whose IDs contain this string
-                  (e.g., 'bach5' to filter for Bach pieces, 'beeth' for Beethoven, 'mozart' for Mozart)
     '''
-    # evaluate all scenarios
+    # evaluate all scenarios, or only those of the pieces matching piece_filter
     d = {}
-    saved_scenario_ids = []
+    scenario_ids = getScenarioIds(scenarios_dir)
     if piece_filter is not None:
-        print(f"Evaluating scenarios for piece {piece_filter}")
-        for scenario_id in getScenarioIds(scenarios_dir):
-        # Apply piece filter if specified
-            if piece_filter is not None:
-                scenarioInfo = f'{scenarios_dir}/{scenario_id}/scenario.info'
-                scenario_data = system_utils.get_scenario_info(scenarioInfo, input_type="info")
-                piece_id = os.path.basename(scenario_data['p']).split('_')[0]  # Extract piece ID from filename
-                if piece_filter.lower() not in piece_id.lower():
-                    continue
-                piece_name = ''.join(filter(str.isalpha, piece_id))
-                if piece_name == piece_filter:
-                    saved_scenario_ids.append(scenario_id)
-        print(f"Evaluating {len(saved_scenario_ids)} scenarios for piece {piece_filter}")
+        def piece_id(scenario_id):
+            info = f'{scenarios_dir}/{scenario_id}/scenario.info'
+            return os.path.basename(system_utils.get_scenario_info(info, input_type="info")['p'])
+        scenario_ids = [s for s in scenario_ids if piece_filter.lower() in piece_id(s).lower()]
+        print(f"Evaluating {len(scenario_ids)} scenarios for piece {piece_filter}")
     else:
         print(f"Evaluating all scenarios")
 
     # evaluate all scenarios of interest
-    for scenario_id in getScenarioIds(scenarios_dir):
+    for scenario_id in scenario_ids:
         print(f"Evaluating scenario ID: {scenario_id}")
         hypFile = f'{exp_dir}/{scenario_id}/hyp{hypFileExt}.npy'
         pianoAnnot = f'{scenarios_dir}/{scenario_id}/p.beats'
