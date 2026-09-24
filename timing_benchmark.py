@@ -53,7 +53,7 @@ QUERY_SCENARIO = 'scenarios/train/constant/s1/pquery_stft.npy'
 def soa_update(t, C, D, cur, prev1, prev2, N):
     """Updates one query frame of SOA, keeping only the three most recent rows of D.
 
-    Mirrors _update_alignment_row_norm in online_alignment's OfflineSOA, including
+    Mirrors soa_row_update in online_alignment's SOA (with normalize=True), including
     its treatment of unreachable cells: when no incoming step is finite the cell is
     left at infinity and cannot win the position argmin.
 
@@ -153,8 +153,7 @@ def soa_stream(ref, query, monotonic=False):
 def validate_against_offline(n_ref=6000, n_query=600):
     """Checks the streaming update reproduces OfflineSOA on a size OfflineSOA can run.
 
-    OfflineSOA allocates (2*n_ref, n_ref) float32 plus the same in int32, so n_ref is
-    kept small enough that this fits comfortably in RAM.
+    n_ref and n_query are kept small so the check runs quickly.
     """
     from online_alignment import run_offline_soa
 

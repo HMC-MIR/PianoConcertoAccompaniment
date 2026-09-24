@@ -116,7 +116,7 @@ The key source files for scenario generation are:
     * **SOA**: Our online alignment algorithm.
     * **SOA_monotonic**: SOA, but the alignment has to be monotonic (`monotonic` set to `True`).
     * **OLTW**: Online time warping using `PerformanceMatcher.jar` found in `match/`. The code to run it is contained in `System_OLTW.ipynb`.
-    * **OLTW_GLOBAL**: Our custom implementation of OLTW. You can find the implementation in `OnlineAlignment/core/alignment/offline/oltw.py`. We haven't implemented this in a notebook yet, but you can find sample code for how to run it in the code segment below.
+    * **OLTW_GLOBAL**: Our custom implementation of OLTW. It is `run_offline_oltw(..., c=None)` in the [online_alignment](https://github.com/HMC-MIR/OnlineAlignment) package. We haven't implemented this in a notebook yet, but you can find sample code for how to run it in the code segment below.
 
 Your goal in this stage would be to convert the notebooks to Python files that could be easily run using a common interface so we don't have to import many separate files in the benchmark script.
 
@@ -149,7 +149,7 @@ import pandas as pd
 
 from soa import alignSOA,alignSOA_no_norm, compute_cosine_distance, compute_euclidean_distance
 from utils.oltw import online_processing
-from OnlineAlignment.core.alignment import run_offline_oltw
+from online_alignment import run_offline_oltw
 
 @jit(nopython=True, parallel=True)
 def cosine_dist(F1, F2):

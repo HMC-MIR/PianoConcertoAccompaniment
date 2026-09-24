@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 from utils.systems import online_processing_oltw, online_processing_matchmaker
 from hmc_mir.align import dtw
 from online_alignment import run_offline_soa, run_offline_oltw
-from online_alignment.constants import DEFAULT_DTW_STEPS, DEFAULT_DTW_WEIGHTS, OLTW_STEPS, OLTW_WEIGHTS, SOA_STEPS, SOA_WEIGHTS
+from online_alignment.constants import OLTW_STEPS, OLTW_WEIGHTS, SOA_STEPS, SOA_WEIGHTS
+from utils.constants import DEFAULT_DTW_STEPS, DEFAULT_DTW_WEIGHTS
 
 DEFAULT_SR = 22050
 DEFAULT_HOP_LENGTH = 512
