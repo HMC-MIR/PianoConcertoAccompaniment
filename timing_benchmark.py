@@ -10,10 +10,13 @@ accuracy results): its cost row and its vectorized DP update, called exactly as
 SOA.feed() calls them. validate_against_feed() checks that the timed loop reproduces
 SOA.feed()'s path before any timing is reported.
 
-With a fixed start and SOA's steps (1,1), (1,2), (2,1), query frame t can only reach
-reference frames t/2 to 2t. Early frames therefore leave most of the row unreachable,
-which a performance in progress does not. Timing starts at t = N/2 by default, where the
-reachable part of the row is largest (three quarters of the reference).
+Both start modes are timed. With a fixed start and SOA's steps (1,1), (1,2), (2,1),
+query frame t can only reach reference frames t/2 to 2t. Early frames therefore leave
+most of the row unreachable, which a performance in progress does not, so fixed-start
+timing starts at t = N/2 by default, where the reachable part of the row is largest
+(three quarters of the reference). With a flexible start almost the whole row is
+reachable from the first frames (all but the first t/2 reference frames), and timing
+starts after 1000 frames.
 
 Run:
     OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMBA_NUM_THREADS=1 \
@@ -31,7 +34,12 @@ import time
 import numpy as np
 
 import online_alignment as oa
-from online_alignment.alignment.algs.soa import soa_scores_fixed, soa_update_fixed
+from online_alignment.alignment.algs.soa import (
+    soa_scores_fixed,
+    soa_scores_flexible,
+    soa_update_fixed,
+    soa_update_flexible,
+)
 
 DEFAULT_SR = 22050
 DEFAULT_HOP_LENGTH = 512
@@ -53,7 +61,7 @@ QUERY_SCENARIO = 'scenarios/train/constant/s1/pquery_stft.npy'
 
 
 class TimedSOA:
-    """The package's fixed-start SOA update, split into its two timed halves.
+    """The package's SOA update, split into its two timed halves.
 
     Uses the cost function and buffers of an online_alignment SOA object and calls
     the same kernels, in the same order, as SOA.feed(). Only the input check and the
@@ -61,9 +69,10 @@ class TimedSOA:
     stop at the end of the reference, so that timing can continue past it.
     """
 
-    def __init__(self, ref):
-        self.soa = oa.SOA(ref)  # fixed start, default steps and weights
-        self.t = 0
+    def __init__(self, ref, flexible=False):
+        self.soa = oa.SOA(ref, flexible_start=flexible)  # default steps and weights
+        self.flexible = flexible
+        self.t = -1
 
     def cost_row(self, q):
         return self.soa._costs(q)
@@ -72,30 +81,43 @@ class TimedSOA:
         """Computes the next row and returns the estimated reference position."""
         self.t += 1
         t, soa = self.t, self.soa
-        cur = t % 3
-        soa_update_fixed(costs, soa._D, cur, (t - 1) % 3, (t - 2) % 3, *soa._w)
-        soa_scores_fixed(t, soa._D[cur], soa._scores)
+        if t == 0:
+            # the first frame: a fixed start begins at (0, 0), a flexible one anywhere
+            if not self.flexible:
+                return 0
+            soa._D[0] = costs
+            soa._S[0] = np.arange(soa.reference_length)
+            return int(np.argmin(costs))
+        cur, r1, r2 = t % 3, (t - 1) % 3, (t - 2) % 3
+        if self.flexible:
+            soa_update_flexible(t, costs, soa._D, soa._S, cur, r1, r2, *soa._w)
+            soa_scores_flexible(t, soa._D[cur], soa._S[cur], soa._scores)
+        else:
+            soa_update_fixed(costs, soa._D, cur, r1, r2, *soa._w)
+            soa_scores_fixed(t, soa._D[cur], soa._scores)
         return int(np.argmin(soa._scores))
 
 
 def validate_against_feed(n_ref=6000, n_query=600):
-    """Checks the timed update loop reproduces SOA.feed()'s path exactly."""
-    ref = np.ascontiguousarray(
-        np.load(f'features/{PIECE_IDS[0]}/chroma_stft_norm2/{PIECE_IDS[0]}.features.npy')[:, :n_ref])
-    query = np.ascontiguousarray(np.load(QUERY_SCENARIO)[:, :n_query])
+    """Checks the timed update loop reproduces SOA.feed()'s path exactly, in both start modes."""
+    ref = np.load(f'features/{PIECE_IDS[0]}/chroma_stft_norm2/{PIECE_IDS[0]}.features.npy')[:, :n_ref]
+    query = np.load(QUERY_SCENARIO)[:, :n_query]
 
-    expected = oa.run_offline_soa(ref, query)
-    timed = TimedSOA(ref)
-    path = [[0, 0]]
-    for t in range(1, query.shape[1]):
-        if path[-1][1] >= ref.shape[1] - 1:
-            break
-        path.append([t, timed.dp_update(timed.cost_row(query[:, t]))])
-    actual = np.array(path, dtype=np.int64).T
-
-    if expected.shape != actual.shape or not np.array_equal(expected, actual):
-        return False, f'path differs from SOA.feed: {actual.shape} vs {expected.shape}'
-    return True, f'exact match on {expected.shape[1]} path points (N={n_ref}, T={n_query})'
+    details = []
+    for flexible in (False, True):
+        expected = oa.run_offline_soa(ref, query, flexible_start=flexible)
+        timed = TimedSOA(ref, flexible)
+        path = []
+        for t in range(query.shape[1]):
+            if path and path[-1][1] >= ref.shape[1] - 1:
+                break
+            path.append([t, timed.dp_update(timed.cost_row(query[:, t]))])
+        actual = np.array(path, dtype=np.int64).T
+        mode = 'flexible' if flexible else 'fixed'
+        if expected.shape != actual.shape or not np.array_equal(expected, actual):
+            return False, f'{mode} start: path differs from SOA.feed'
+        details.append(f'{mode} start: exact match on {expected.shape[1]} path points')
+    return True, '; '.join(details) + f' (N={n_ref}, T={n_query})'
 
 
 def build_reference(n_frames):
@@ -123,15 +145,17 @@ def summarize(samples_s):
     }
 
 
-def time_reference_length(n_frames, query, n_updates, n_warmup=None):
+def time_reference_length(n_frames, query, n_updates, n_warmup=None, flexible=False):
     """Times the cost row and the DP update separately at one reference length.
 
-    n_warmup defaults to N/2 untimed updates, where the reachable part of the row is
-    largest.
+    n_warmup defaults to N/2 untimed updates with a fixed start, where the reachable
+    part of the row is largest, and to 1000 with a flexible start, which reaches all
+    but the first t/2 reference frames.
     """
     if n_warmup is None:
-        n_warmup = n_frames // 2
-    timed = TimedSOA(build_reference(n_frames))
+        n_warmup = 1000 if flexible else n_frames // 2
+    timed = TimedSOA(build_reference(n_frames), flexible)
+    timed.dp_update(timed.cost_row(np.ascontiguousarray(query[:, 0])))  # the first frame
     scores = timed.soa._scores
 
     cost_s, dp_s, total_s, argmin_s = [], [], [], []
@@ -161,6 +185,7 @@ def time_reference_length(n_frames, query, n_updates, n_warmup=None):
     return {
         'n_frames': n_frames,
         'minutes': n_frames * DEFAULT_HOP_LENGTH / DEFAULT_SR / 60.0,
+        'start': 'flexible' if flexible else 'fixed',
         'n_warmup': n_warmup,
         'reachable_fraction': reachable,
         'cost_row': summarize(cost_s),
@@ -268,6 +293,13 @@ def time_matchmaker(env_python, n_updates, n_warmup):
 # ---------------------------------------------------------------------------
 
 
+# Keys of the results for each start mode: the sweep, and SOA on the MatchMaker reference
+MODES = {
+    'fixed': ('soa', 'soa_at_matchmaker_reference'),
+    'flexible': ('soa_flexible', 'soa_flexible_at_matchmaker_reference'),
+}
+
+
 def write_report(results, path):
     """Renders the JSON results as markdown tables."""
     env = results['environment']
@@ -279,21 +311,29 @@ def write_report(results, path):
         f"Machine: {env['cpu']}, pinned to core(s) {env['cpu_affinity']}. "
         f"Python {env['python']}, NumPy {env['numpy']}, numba {env['numba']}, {env['dtype']} features.",
         '',
-        f"Times the online_alignment {results['environment']['online_alignment']} SOA update, "
-        f"checked against `SOA.feed()`, from query frame N/2 on,",
-        'where the reachable part of the row is largest.',
-        '',
-        '| Reference | N | Cost row (ms) | DP update (ms) | Total median (ms) | p95 | max | ns per ref frame | × under real time |',
-        '|---|---|---|---|---|---|---|---|---|',
+        f"Times the online_alignment {env['online_alignment']} SOA update, checked against "
+        '`SOA.feed()`. Fixed start is timed from query frame N/2 on, where the reachable part',
+        'of the row is largest; flexible start reaches all but the first t/2 reference frames',
+        'and is timed after 1000 frames.',
     ]
-    for r in results['soa']:
-        t = r['total']
-        lines.append(
-            f"| {r['minutes']:.0f} min | {r['n_frames']:,} | {r['cost_row']['median_ms']:.3f} | "
-            f"{r['dp_update']['median_ms']:.3f} | **{t['median_ms']:.3f}** | {t['p95_ms']:.3f} | "
-            f"{t['max_ms']:.3f} | {t['median_ms'] * 1e6 / r['n_frames']:.2f} | "
-            f"{FRAME_PERIOD_MS / t['median_ms']:.1f}× |"
-        )
+    for mode, (key, _) in MODES.items():
+        if key not in results:
+            continue
+        lines += [
+            '',
+            f'## {mode.capitalize()} start',
+            '',
+            '| Reference | N | Cost row (ms) | DP update (ms) | Total median (ms) | p95 | max | ns per ref frame | × under real time |',
+            '|---|---|---|---|---|---|---|---|---|',
+        ]
+        for r in results[key]:
+            t = r['total']
+            lines.append(
+                f"| {r['minutes']:.0f} min | {r['n_frames']:,} | {r['cost_row']['median_ms']:.3f} | "
+                f"{r['dp_update']['median_ms']:.3f} | **{t['median_ms']:.3f}** | {t['p95_ms']:.3f} | "
+                f"{t['max_ms']:.3f} | {t['median_ms'] * 1e6 / r['n_frames']:.2f} | "
+                f"{FRAME_PERIOD_MS / t['median_ms']:.1f}× |"
+            )
 
     feat = results.get('feature_extraction')
     if feat:
@@ -309,10 +349,11 @@ def write_report(results, path):
                   f"(~{int(mm['window_size_seconds'] * DEFAULT_SR / DEFAULT_HOP_LENGTH):,} frames).",
                   '',
                   '| System | Median (ms) | p95 | max |', '|---|---|---|---|']
-        soa_mm = results.get('soa_at_matchmaker_reference')
-        if soa_mm:
-            t = soa_mm['total']
-            lines.append(f"| SOA | {t['median_ms']:.3f} | {t['p95_ms']:.3f} | {t['max_ms']:.3f} |")
+        for mode, (_, mm_key) in MODES.items():
+            soa_mm = results.get(mm_key)
+            if soa_mm:
+                t = soa_mm['total']
+                lines.append(f"| SOA, {mode} start | {t['median_ms']:.3f} | {t['p95_ms']:.3f} | {t['max_ms']:.3f} |")
         for name in ('dixon', 'arzt'):
             r = mm.get(name, {})
             if 'median_ms' in r:
@@ -322,14 +363,9 @@ def write_report(results, path):
         f.write('\n'.join(lines) + '\n')
 
 
-def write_csv(results, soa_path, baselines_path):
-    """Writes the results as two flat CSVs, one per schema.
-
-    The SOA sweep carries a cost-row/DP-update breakdown that the baselines have no
-    equivalent for, so folding both into one table would leave half the columns
-    empty. They are kept separate instead.
-    """
-    with open(soa_path, 'w', newline='') as f:
+def write_soa_csv(rows, path):
+    """Writes one start mode's reference-length sweep as a flat CSV."""
+    with open(path, 'w', newline='') as f:
         w = csv.writer(f)
         w.writerow([
             'ref_minutes', 'n_ref_frames',
@@ -339,7 +375,7 @@ def write_csv(results, soa_path, baselines_path):
             'ns_per_ref_frame', 'x_under_real_time',
             'argmin_standalone_median_ms', 'n_timed_updates',
         ])
-        for r in results['soa']:
+        for r in rows:
             t = r['total']
             w.writerow([
                 f"{r['minutes']:.0f}", r['n_frames'],
@@ -352,22 +388,31 @@ def write_csv(results, soa_path, baselines_path):
                 f"{r['argmin_standalone']['median_ms']:.4f}", t['n'],
             ])
 
-    with open(baselines_path, 'w', newline='') as f:
+
+def write_baselines_csv(results, path):
+    """Writes the OLTW followers, SOA on their reference, and feature extraction.
+
+    The SOA sweeps carry a cost-row/DP-update breakdown that the baselines have no
+    equivalent for, so folding both into one table would leave half the columns
+    empty. They are kept separate instead.
+    """
+    with open(path, 'w', newline='') as f:
         w = csv.writer(f)
         w.writerow(['system', 'config', 'median_ms', 'p95_ms', 'max_ms', 'mean_ms',
                     'n_timed_updates', 'notes'])
 
         mm = results.get('matchmaker') or {}
-        soa_mm = results.get('soa_at_matchmaker_reference')
-        if soa_mm:
-            t = soa_mm['total']
-            w.writerow([
-                'soa', f"full reference, ref {soa_mm['n_frames']} frames",
-                f"{t['median_ms']:.4f}", f"{t['p95_ms']:.4f}",
-                f"{t['max_ms']:.4f}", f"{t['mean_ms']:.4f}", t['n'],
-                'cost row + DP update, same reference as the MatchMaker rows',
-            ])
-        if 'error' not in mm:
+        for mode, (_, mm_key) in MODES.items():
+            soa_mm = results.get(mm_key)
+            if soa_mm:
+                t = soa_mm['total']
+                w.writerow([
+                    f'soa-{mode}', f"full reference, ref {soa_mm['n_frames']} frames",
+                    f"{t['median_ms']:.4f}", f"{t['p95_ms']:.4f}",
+                    f"{t['max_ms']:.4f}", f"{t['mean_ms']:.4f}", t['n'],
+                    f'{mode} start; cost row + DP update, same reference as the MatchMaker rows',
+                ])
+        if mm and 'error' not in mm:
             window_frames = int(mm.get('window_size_seconds', 0) * DEFAULT_SR / DEFAULT_HOP_LENGTH)
             for name in ('dixon', 'arzt'):
                 r = mm.get(name, {})
@@ -393,22 +438,36 @@ def write_csv(results, soa_path, baselines_path):
             ])
 
 
+def print_row(r):
+    print(f"N={r['n_frames']:>7} ({r['minutes']:>3.0f} min, {r['start']} start, from frame "
+          f"{r['n_warmup']}, {100 * r['reachable_fraction']:.0f}% reachable)  "
+          f"cost {r['cost_row']['median_ms']:6.3f}  "
+          f"dp {r['dp_update']['median_ms']:6.3f}  "
+          f"total med {r['total']['median_ms']:6.3f}  "
+          f"p95 {r['total']['p95_ms']:6.3f}  max {r['total']['max_ms']:6.3f} ms  "
+          f"({FRAME_PERIOD_MS / r['total']['median_ms']:.1f}x under real time)")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--n-updates', type=int, default=2000,
                         help='Timed updates per reference length.')
     parser.add_argument('--n-warmup', type=int, default=None,
-                        help='Untimed updates before measurement begins (default N/2, where '
-                             'the reachable part of the row is largest).')
+                        help='Untimed updates before measurement begins (default: N/2 with a '
+                             'fixed start, where the reachable part of the row is largest; '
+                             '1000 with a flexible start).')
     parser.add_argument('--minutes', type=int, nargs='+', default=list(REF_MINUTES),
                         help='Reference durations to sweep, in minutes.')
+    parser.add_argument('--start', choices=('fixed', 'flexible', 'both'), default='both',
+                        help='Which SOA start modes to time.')
     parser.add_argument('--out', default='eval/timing.json', help='Where to write results.')
     parser.add_argument('--matchmaker-python',
                         default=os.path.expanduser('~/ttmp/anaconda3/envs/matchmaker/bin/python'),
                         help='Interpreter of the matchmaker env; pass "" to skip.')
     parser.add_argument('--skip-validation', action='store_true')
     args = parser.parse_args()
+    modes = ('fixed', 'flexible') if args.start == 'both' else (args.start,)
 
     results = {'environment': environment()}
     print(f"cpu            : {results['environment']['cpu']}")
@@ -427,24 +486,22 @@ def main():
     query = np.ascontiguousarray(np.load(QUERY_SCENARIO), dtype=np.float32)
 
     # Compile before the first timed length so JIT does not land inside a measurement.
-    warm = TimedSOA(np.ones((12, 8), np.float32))
-    warm.dp_update(warm.cost_row(np.ones(12, np.float32)))
+    for flexible in (False, True):
+        warm = TimedSOA(np.ones((12, 8), np.float32), flexible)
+        for _ in range(3):
+            warm.dp_update(warm.cost_row(np.ones(12, np.float32)))
 
-    rows = []
-    for minutes in args.minutes:
-        n_frames = int(round(minutes * 60 / (DEFAULT_HOP_LENGTH / DEFAULT_SR)))
-        r = time_reference_length(n_frames, query, args.n_updates, args.n_warmup)
-        rows.append(r)
-        print(f"N={n_frames:>7} ({minutes:>3} min, from frame {r['n_warmup']}, "
-              f"{100 * r['reachable_fraction']:.0f}% reachable)  "
-              f"cost {r['cost_row']['median_ms']:6.3f}  "
-              f"dp {r['dp_update']['median_ms']:6.3f}  "
-              f"total med {r['total']['median_ms']:6.3f}  "
-              f"p95 {r['total']['p95_ms']:6.3f}  max {r['total']['max_ms']:6.3f} ms  "
-              f"({FRAME_PERIOD_MS / r['total']['median_ms']:.1f}x under real time)")
-    results['soa'] = rows
+    for mode in modes:
+        rows = []
+        for minutes in args.minutes:
+            n_frames = int(round(minutes * 60 / (DEFAULT_HOP_LENGTH / DEFAULT_SR)))
+            r = time_reference_length(n_frames, query, args.n_updates, args.n_warmup,
+                                      flexible=mode == 'flexible')
+            rows.append(r)
+            print_row(r)
+        results[MODES[mode][0]] = rows
+        print()
 
-    print()
     feat = time_feature_extraction()
     results['feature_extraction'] = feat
     if feat:
@@ -462,19 +519,25 @@ def main():
                     print(f"matchmaker {name:<8}: median {r['median_ms']:.3f} ms  "
                           f"p95 {r['p95_ms']:.3f}  max {r['max_ms']:.3f}")
             # SOA on the same reference length, for a like-for-like comparison
-            soa_mm = time_reference_length(mm['reference_frames'], query, args.n_updates,
-                                           args.n_warmup)
-            results['soa_at_matchmaker_reference'] = soa_mm
-            print(f"soa (same ref) : median {soa_mm['total']['median_ms']:.3f} ms  "
-                  f"p95 {soa_mm['total']['p95_ms']:.3f}  max {soa_mm['total']['max_ms']:.3f}")
+            for mode in modes:
+                soa_mm = time_reference_length(mm['reference_frames'], query, args.n_updates,
+                                               args.n_warmup, flexible=mode == 'flexible')
+                results[MODES[mode][1]] = soa_mm
+                print(f"soa {mode:<8} (same ref): median {soa_mm['total']['median_ms']:.3f} ms  "
+                      f"p95 {soa_mm['total']['p95_ms']:.3f}  max {soa_mm['total']['max_ms']:.3f}")
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, 'w') as f:
         json.dump(results, f, indent=2)
     stem = os.path.splitext(args.out)[0]
-    write_report(results, f'{stem}_report.md')
-    write_csv(results, f'{stem}_soa.csv', f'{stem}_baselines.csv')
-    print(f"\nwrote {args.out}, {stem}_report.md, {stem}_soa.csv, {stem}_baselines.csv")
+    written = [args.out, f'{stem}_report.md', f'{stem}_baselines.csv']
+    write_report(results, written[1])
+    write_baselines_csv(results, written[2])
+    for mode in modes:
+        path = f'{stem}_soa.csv' if mode == 'fixed' else f'{stem}_soa_flexible.csv'
+        write_soa_csv(results[MODES[mode][0]], path)
+        written.append(path)
+    print('\nwrote ' + ', '.join(written))
 
 
 if __name__ == '__main__':
